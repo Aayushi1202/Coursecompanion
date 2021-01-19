@@ -1,0 +1,16 @@
+﻿// <copyright file="member-validation-api.ts" company="Microsoft">
+// Copyright (c) Microsoft. All rights reserved.
+// </copyright>
+
+import { AxiosResponse } from "axios";
+import axios from "./axios-decorator";
+import { IUserRole } from "../model/type";
+
+/**
+* get current logged in user role.
+* @param  {Function} handleAuthFailure Authentication failure callback function.
+*/
+export const getUserRole = async (handleAuthFailure: (error: string) => void): Promise<AxiosResponse<IUserRole>> => {
+    let url = '/api/groupmember';
+    return await axios.get(url, handleAuthFailure);
+}
