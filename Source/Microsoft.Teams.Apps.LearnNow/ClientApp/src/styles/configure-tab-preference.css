@@ -5,6 +5,7 @@
 .container-style {
     margin-top: 0.3rem;
     overflow-x: hidden;
+    height: 30rem;
 }
 
 .subject-label {
@@ -15,7 +16,7 @@
 .dark-container .subject-label {
     margin-top: 2rem;
     font-family: SegoeUI;
-    color: #fff;
+    color: #FFF;
     letter-spacing: 0;
     line-height: 16px;
 }

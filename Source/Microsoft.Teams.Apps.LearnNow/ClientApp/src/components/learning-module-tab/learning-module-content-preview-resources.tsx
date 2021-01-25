@@ -73,10 +73,15 @@ const getLearningModuleTableRows = (learningModuleProps: any) => {
                         >
                             <Flex>
                                 <Flex.Item>
-                                    <div className="preview-file-icon">
-                                        <Image
-                                            src={getFileImageFromFileName(value.attachmentUrl)}
-                                        />
+                                    <div className="preview-file-icon">{
+                                        learningModuleProps.screenWidth! >= Resources.maxWidthForMobileView ?
+                                            <Image
+                                                src={getFileImageFromFileName(value.attachmentUrl)}
+                                            />
+                                            :
+                                            <></>
+                                            }
+                                        
                                     </div>
                                 </Flex.Item>
                                 <Flex.Item>
@@ -91,9 +96,9 @@ const getLearningModuleTableRows = (learningModuleProps: any) => {
                                         <Flex>
                                             <Text
                                                 className="subject-name"
-                                                content={value.subject.subjectName + " | "}
+                                                content={value.subject.subjectName}
                                                 weight="semibold"
-                                            />
+                                            /> |
                                             <Text
                                                 className="grade-name"
                                                 content={value.grade.gradeName}
@@ -102,7 +107,7 @@ const getLearningModuleTableRows = (learningModuleProps: any) => {
                                     </div>
                                 </Flex.Item>
                             </Flex>
-                            {learningModuleProps.screenWidth! >= Resources.maxWidthForMobileViewForResource ?
+                            {learningModuleProps.screenWidth! >= Resources.maxWidthForMobileView ?
                                 <Flex>
                                     <Text
                                         className="resource-description"

@@ -7,15 +7,16 @@ import { Flex, Input, Checkbox } from "@fluentui/react-northstar";
 import { SearchIcon } from "@fluentui/react-icons-northstar";
 import { useTranslation } from 'react-i18next';
 import { ResourcesKeyCodes } from "../../constants/resources";
+import Resources from "../../constants/resources";
 
 import "../../styles/command-bar.css";
-
 
 interface ICommandBarProps {
     handleSearchInputChange: (searchString: string) => void;
     isValidUser: boolean;
     handleCreatedByToggleButtonChange: () => void;
     handleSearchIconClick: () => void;
+    windowWidth: number;
 }
 
 const CommandBar: React.FunctionComponent<ICommandBarProps> = props => {
@@ -36,7 +37,7 @@ const CommandBar: React.FunctionComponent<ICommandBarProps> = props => {
             <Flex gap="gap.small" vAlign="center" hAlign="end" className="command-bar-wrapper">
                 {props.isValidUser ?
                     <Checkbox
-                        label={localize("createdToggleButtonText")}
+                        label={props.windowWidth! >= Resources.maxWidthForMobileView ? localize("createdToggleButtonText"): ""}
                         onChange={props.handleCreatedByToggleButtonChange}
                         toggle />
                     : <></>

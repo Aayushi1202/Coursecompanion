@@ -7,6 +7,8 @@
     color: black !important;
     box-shadow: -1px 0.3rem 0.3rem #dedddd;
     opacity: 1 !important;
+    width: -webkit-fill-available;
+    left: 0rem;
 }
 
 .dark-container .notification-container {
@@ -17,6 +19,8 @@
     background-color: white;
     color: black !important;
     box-shadow: -1px 0.3rem 0.3rem #605E5C;
+    width: -webkit-fill-available;
+    left: 0rem;
 }
 
 .contrast-container .notification-container {
@@ -27,13 +31,14 @@
     background-color: white;
     color: black !important;
     box-shadow: -1px 0.3rem 0.3rem black;
+    width: -webkit-fill-available;
+    left: 0rem;
 }
 
 .notification-success {
     position: relative;
     overflow: hidden;
     padding: 1.6rem;
-    width: 82vw;
     height: 5rem;
     opacity: 1 !important;
     background-repeat: no-repeat;
@@ -45,12 +50,11 @@
     position: relative;
     overflow: hidden;
     padding: 1.6rem;
-    width: 82vw;
     height: 5rem;
     opacity: 1 !important;
     background-repeat: no-repeat;
     border: none !important;
-    background-color: rgba(249, 236, 234, 0.25);
+    background-color: #F9ECEA;
 }
 
 .close-button {
@@ -63,75 +67,7 @@
 }
 
 .failure-icon {
-    color: red;
+    color: #C4314B;
 }
 
 
-/*If the screen zoom level is 33% or less */
-@media (min-width:3901px) {
-    .notification-success {
-        width: 44vw;
-    }
-}
-
-/*If the screen zoom level is 50% */
-@media (min-width: 2600px) and (max-width:3900px) {
-    .notification-success {
-        width: 66.5vw;
-    }
-}
-
-/*If the screen zoom level is 67%  */
-@media (min-width: 1901px) and (max-width:2599px) {
-    .notification-success {
-        width: 70vw;
-    }
-}
-
-/*If the screen zoom level is 75%  */
-@media (min-width: 1710px) and (max-width:1900px) {
-    .notification-success {
-        width: 82vw;
-    }
-}
-
-/*If the screen zoom level is 80% */
-@media (min-width: 1450px) and (max-width: 1709px) {
-    .notification-success {
-        width: 89vw;
-    }
-}
-
-/*If the screen zoom level is 90% */
-@media (min-width: 1400px) and (max-width: 1449px) {
-    .notification-success {
-        width: 74vw;
-    }
-}
-
-/* If the screen zoom level is 100% */
-@media (min-width: 1250px ) and (max-width: 1399px) {
-    .notification-success {
-        width: 83vw;
-    }
-}
-
-/* If the screen zoom level is 110% */
-@media (min-width: 1000px ) and (max-width: 1249px) {
-    .notification-success {
-        width: 91vw;
-    }
-}
-
-/* If the screen zoom level is 125%*/
-@media (min-width: 549px) and (max-width: 999px) {
-    .notification-success {
-        width: 74vw;
-    }
-}
-
-@media (max-width: 550px) {
-    .notification-success {
-        width: 74vw;
-    } 
-}

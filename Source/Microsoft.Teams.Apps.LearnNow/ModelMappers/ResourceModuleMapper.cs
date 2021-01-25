@@ -27,6 +27,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
             {
                 ResourceId = resourceModuleViewModel.ResourceId,
                 LearningModuleId = resourceModuleViewModel.LearningModuleId,
+                CreatedOn = DateTimeOffset.Now,
             };
         }
     }

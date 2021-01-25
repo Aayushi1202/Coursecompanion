@@ -58,6 +58,7 @@ interface ILearningModuleState {
     tagValidation: ITagValidationParameters,
     learningModuleTag: ILearningModuleTag[],
     windowWidth: number,
+    tag: string,
 }
 
 /**
@@ -105,6 +106,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
             learningModuleTag: [],
             tagValidation: { isExisting: false, isTagsCountValid: true, },
             windowWidth: window.innerWidth,
+            tag: "",
         }
         let search = this.history.location.search;
         let params = new URLSearchParams(search);
@@ -402,7 +404,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
     */
     private getRequiredFieldError = (isValuePresent: boolean) => {
         if (!isValuePresent) {
-            return (<Text className="error-message-text" content={this.localize("emptyFieldErrorMessage")} error size="small" />);
+            return (<Text content={this.localize("emptyFieldErrorMessage")} error size="small" />);
         }
 
         return (<></>);
@@ -662,7 +664,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
             this.setState({ userSelectedItem: "" })
         }
         filteredItem!.map((resource: IResourceDetail) => {
-            if (resource.checkItem === true) {
+            if (resource.checkItem) {
                 filterItemEdit.push(resource);
             }
 
@@ -735,7 +737,9 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                                         {this.getRequiredFieldError(this.state.isTitlePresent)}
                                     </Flex.Item>
                                     <Flex.Item push>
-                                        {this.getTitleExistsError(this.state.isTitleValid)}
+                                        {this.state.isTitlePresent ?
+                                            this.getTitleExistsError(this.state.isTitleValid) : <></>
+                                        }
                                     </Flex.Item>
                                 </Flex>
                                 <Flex>
@@ -749,7 +753,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                                 <Flex>
                                     <TextArea placeholder={this.localize('descriptionPlaceHolderText')} className="input-padding-description-module" fluid value={this.state.learningModuleDetail.description} onChange={this.handleDescriptionChange} maxLength={Constants.descriptionMaxLength} />
                                 </Flex>
-                                <Flex>
+                                <Flex className="tag-padding">
                                     <Text size="small" content={this.localize('tagsText')} />
                                     <Flex.Item push>
                                         {this.getTagError()}
@@ -764,6 +768,8 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                                     fluid
                                     onChange={this.handleTagChange}
                                     className="tag-dropdown-input"
+                                    searchQuery={this.state.tag}
+                                    id="tag-lm"
                                 />
                                 <div className="tags-wrapper-lm">
                                     <Flex gap="gap.smaller" vAlign="center">
@@ -780,7 +786,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                                 </div>
 
                                 {this.state.isEditMode &&
-                                    <LearningModuleResourceTable responsesData={this.state.filteredItem} onCheckBoxChecked={this.onLearningModuleSelected} isGradeSubjectDisable={this.state.isGradeSubjectDisable} />}
+                                    <LearningModuleResourceTable responsesData={this.state.filteredItem} onCheckBoxChecked={this.onLearningModuleSelected} isGradeSubjectDisable={this.state.isGradeSubjectDisable} windowWidth={this.state.windowWidth} />}
 
                             </div>
                         </div>

@@ -24,9 +24,9 @@ interface IShowAttachmentProps {
 const ShowAttachment: React.FunctionComponent<IShowAttachmentProps> = props => {
     const localize = useTranslation().t;
 
-   /**
-   * Gets file icon from file extension.
-   */
+    /**
+    * Gets file icon from file extension.
+    */
     const getFileIconFromFileName = () => {
 
         let fileExtension = getFileExtension(props.fileName);
@@ -77,21 +77,23 @@ const ShowAttachment: React.FunctionComponent<IShowAttachmentProps> = props => {
         return (
             <>
                 {props.showAttachment && !props.adjustWidth &&
-                    <Flex className="file-attachment-width">
+                    <Flex className="file-attachment-width attachment-text-overflow">
                         <Flex.Item>
                             <Attachment icon={getFileIconFromFileName()} header={props.fileName} />
                         </Flex.Item>
                     </Flex>
                 }
                 {props.showAttachment && props.adjustWidth &&
-                    <Flex className="file-attachment-width-preview">
+                    <Flex className="file-attachment-width-preview attachment-text-overflow">
                         <Flex.Item>
                             <Attachment icon={getFileIconFromFileName()} header={props.fileName}
                                 action={{
                                     icon: <DownloadIcon />,
                                     onClick: props.handleFileDownload,
                                     title: localize("downloadButtonTitle"),
-                                }} />
+                                }}
+                                title={props.fileName}
+                            />
                         </Flex.Item>
                     </Flex>
                 }

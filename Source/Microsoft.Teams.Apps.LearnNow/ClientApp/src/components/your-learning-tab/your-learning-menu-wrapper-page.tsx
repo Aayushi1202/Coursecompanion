@@ -76,13 +76,13 @@ class YourLearningTabMenu extends React.Component<WithTranslation, IYourLearning
 
         const DiscoverMenuItems: ShorthandCollection<MenuItemProps, MenuShorthandKinds> = [
             {
-                key: 'Draft events',
+                key: '0',
                 content: this.localize('resourceLabel'),
 
             },
             {
-                key: 'Sent events',
-                content: this.localize('learningModuleLabel'),
+                key: '1',
+                content: this.state.windowWidth >= Resources.maxWidthForMobileView ? this.localize('learningModuleLabel') : this.localize('mobileLearningModuleLabel'),
             }
         ]
 
@@ -92,7 +92,7 @@ class YourLearningTabMenu extends React.Component<WithTranslation, IYourLearning
                 key: 0
             },
             {
-                header: this.localize('learningModuleLabel'),
+                header: this.state.windowWidth >= Resources.maxWidthForMobileView ? this.localize('learningModuleLabel') : this.localize('mobileLearningModuleLabel'),
                 key: 1
             },
         ];

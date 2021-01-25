@@ -77,51 +77,52 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories
             var resourceEntities = this.context.Set<Resource>()
                 .Include(x => x.Subject)
                 .Include(x => x.Grade)
-                .Include(x => x.ResourceTag).ThenInclude(p => p.Tag);
+                .Include(x => x.ResourceTag).ThenInclude(p => p.Tag).AsQueryable();
 
-            var baseEntitySets = from resource in resourceEntities
-                                 join resourceTag in this.context.Set<ResourceTag>()
-                                 on resource.Id equals resourceTag.ResourceId into grouping
-                                 from resourceTag in grouping.DefaultIfEmpty()
-                                 select new { resource, resourceTag };
-
-            var query = baseEntitySets;
+            var query = resourceEntities;
             if (exactMatch)
             {
 #pragma warning disable CA1307 // Ignoring StringComparison as EF handles the string comparison while building SQL query from LINQ expression. In case of explicit StringComparison addition, then it fails the SQL query execution with error.
-                return await query.Where(x => string.Equals(x.resource.Title, filterModel.SearchText)).Select(x => x.resource).AsNoTracking().ToListAsync();
+                return await query.Where(x => string.Equals(x.Title, filterModel.SearchText)).AsNoTracking().ToListAsync();
 #pragma warning restore CA1307 // Specify StringComparison
             }
 
             if (subjectIds != null && subjectIds.Any())
             {
-                query = query.Where(x => subjectIds.Contains(x.resource.SubjectId));
+                query = query.Where(x => subjectIds.Contains(x.SubjectId));
             }
 
             if (gradeIds != null && gradeIds.Any())
             {
-                query = query.Where(x => gradeIds.Contains(x.resource.GradeId));
+                query = query.Where(x => gradeIds.Contains(x.GradeId));
             }
 
             if (createdByObjectIds != null && createdByObjectIds.Any())
             {
-                query = query.Where(x => createdByObjectIds.Contains(x.resource.CreatedBy));
-            }
-
-            if (tagIds != null && tagIds.Any())
-            {
-                query = query.Where(x => tagIds.Contains(x.resourceTag.TagId));
+                query = query.Where(x => createdByObjectIds.Contains(x.CreatedBy));
             }
 
             if (!string.IsNullOrEmpty(filterModel.SearchText))
             {
 #pragma warning disable CA1307 // Ignoring StringComparison as EF handles the string comparison while building SQL query from LINQ expression. In case of explicit StringComparison addition, then it fails the SQL query execution with error.
-                query = query.Where(x => x.resource.Title.Contains(filterModel.SearchText));
+                query = query.Where(x => x.Title.Contains(filterModel.SearchText));
 #pragma warning restore CA1307 // Specify StringComparison
             }
 
-            var result = await query.OrderByDescending(x => x.resource.UpdatedOn).Skip(skip).Take(count).AsNoTracking().ToListAsync().ConfigureAwait(false);
-            return result.Select(x => x.resource);
+            if (tagIds != null && tagIds.Any())
+            {
+                var withTagsQuery = from resource in query
+                             join resourceTag in this.context.Set<ResourceTag>()
+                             on resource.Id equals resourceTag.ResourceId into grouping
+                             from resourceTag in grouping.DefaultIfEmpty()
+                             select new { resource, resourceTag };
+                withTagsQuery = withTagsQuery.Where(x => tagIds.Contains(x.resourceTag.TagId));
+                var tagsResult = await withTagsQuery.Skip(skip).Take(count).AsNoTracking().ToListAsync().ConfigureAwait(false);
+                return tagsResult.Select(x => x.resource);
+            }
+
+            var result = await query.OrderByDescending(x => x.UpdatedOn).Skip(skip).Take(count).AsNoTracking().ToListAsync().ConfigureAwait(false);
+            return result;
         }
 
         /// <summary>
@@ -213,11 +214,11 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories
         }
 
         /// <summary>
-        /// Get resource with votes.
+        /// Get resources with votes.
         /// </summary>
         /// <param name="resources">Resource collection.</param>
         /// <returns>Returns resource detail model collection.</returns>
-        public Dictionary<Guid, List<ResourceDetailModel>> GetResourcesWithVote(IEnumerable<Resource> resources)
+        public Dictionary<Guid, List<ResourceDetailModel>> GetResourcesWithVotes(IEnumerable<Resource> resources)
         {
             resources = resources ?? throw new ArgumentNullException(nameof(resources));
 

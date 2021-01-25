@@ -10,10 +10,11 @@ import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
 import LearningModuleTable from "./learning-module-table";
 import { createResourceModuleMapping, getLearningModules } from "../../api/learning-module-api";
-import { IFilterModel, IResourceModuleDetails } from "../../model/type";
+import { IFilterModel, IResourceModuleDetails, IUserRole } from "../../model/type";
 
 import "../../styles/learning-module.css";
 import Resources from "../../constants/resources";
+import { getUserRole } from "../../api/member-validation-api";
 
 interface ILearningModuleItemData {
     id: string;
@@ -33,6 +34,7 @@ interface ILearningModuleItemState {
     searchValue: string;
     isSubmitLoading: boolean;
     screenWidth: number;
+    userRole: IUserRole;
 }
 
 /**
@@ -43,6 +45,7 @@ class LearningModuleItems extends React.Component<
     ILearningModuleItemState
     > {
     localize: TFunction;
+    userAADObjectId?: string | null = null;
     history: any;
     gradeId: string | null = null;
     subjectId: string | null = null;
@@ -59,6 +62,10 @@ class LearningModuleItems extends React.Component<
             learningModuleData: [],
             isSubmitLoading: false,
             screenWidth: window.innerWidth,
+            userRole: {
+                isAdmin: false,
+                isTeacher: false
+            },
         };
         this.history = props.history;
         let search = this.history.location.search;
@@ -74,12 +81,39 @@ class LearningModuleItems extends React.Component<
      */
     public async componentDidMount() {
         this.setState({ isLoading: true });
+        microsoftTeams.initialize();
+        microsoftTeams.getContext((context) => {
+            this.userAADObjectId = context.userObjectId!
+        });
+        await this.validateUser();
         this.getAllLearningModules();
         window.addEventListener("resize", this.update);
     }
 
     public componentDidUnmount() {
         window.removeEventListener('resize', this.update);
+    }
+
+    /**
+    * Validate whether user is part of a security group.
+    */
+    private validateUser = async () => {
+        const userRole = await getUserRole(this.handleAuthenticationFailure);
+        if (userRole.status === 200 && userRole.data) {
+            this.setState({ userRole: userRole.data });
+        }
+    }
+
+    /**
+    * handle error occurred during authentication
+    */
+    private handleAuthenticationFailure = (error: string) => {
+        // When the getAuthToken function returns a "resourceRequiresConsent" error, 
+        // it means Azure AD needs the user's consent before issuing a token to the app. 
+        // The following code redirects the user to the "Sign in" page where the user can grant the consent. 
+        // Right now, the app redirects to the consent page for any error.
+        console.error("Error from getAuthToken: ", error);
+        this.history.push('/signin');
     }
 
     /**
@@ -99,7 +133,8 @@ class LearningModuleItems extends React.Component<
             subjectIds: [this.subjectId!],
             gradeIds: [this.gradeId!],
             tagIds: [],
-            createdByObjectIds: [],
+            createdByObjectIds: this.state.userRole.isTeacher ? [this.userAADObjectId!] : [],
+            searchText: this.state.searchValue
         };
 
         let response = await getLearningModules(0, filterRequestDetails);
@@ -123,7 +158,7 @@ class LearningModuleItems extends React.Component<
      */
     private handleChange = (event: any) => {
         this.setState({ searchValue: event.target.value });
-        this.handleLearningModuleSearch(event.target.value);
+        // this.handleLearningModuleSearch(event.target.value);
     };
 
     /**
@@ -133,9 +168,7 @@ class LearningModuleItems extends React.Component<
     private handleKeyPress = (event: any) => {
         var keyCode = event.which || event.keyCode;
         if (keyCode === Resources.keyCodeEnter) {
-            if (event.target.value.length > 2 || event.target.value === "") {
-                this.handleLearningModuleSearch(event.target.value);
-            }
+            this.getAllLearningModules();
         }
     };
 
@@ -153,8 +186,11 @@ class LearningModuleItems extends React.Component<
             let response = await createResourceModuleMapping(
                 resourceModuleData
             );
-            if (response.status === 200 || response.status === 409) {
+            if (response.status === 200) {
                 let details: any = { isSuccess: true };
+                microsoftTeams.tasks.submitTask(details);
+            } else if (response.status === 409) {
+                let details: any = { isDuplicate : true };
                 microsoftTeams.tasks.submitTask(details);
             }
             this.setState({ isSubmitLoading: true });
@@ -168,23 +204,6 @@ class LearningModuleItems extends React.Component<
         return this.state.userSelectedItem.length > 0;
 
     };
-
-    /**
-    *Filters table as per search text entered by user
-    *@param {String} searchText Search text entered by user
-    */
-    private handleLearningModuleSearch = (searchText: string) => {
-        if (searchText) {
-            var filteredLearningModule = this.state.learningModuleData.filter(function (learningModule) {
-                return learningModule.title.toUpperCase().includes(searchText.toUpperCase());
-            });
-            this.setState({ filteredItem: filteredLearningModule });
-        }
-        else {
-            this.setState({ filteredItem: this.state.learningModuleData });
-        }
-    }
-
 
     /**
      * Navigate to add new module page
@@ -260,7 +279,7 @@ class LearningModuleItems extends React.Component<
                                             fluid
                                             icon={
                                                 <SearchIcon
-                                                    onClick={this.handleChange}
+                                                    onClick={this.getAllLearningModules}
                                                 />
                                             }
                                             placeholder={this.localize("searchModulePlaceHolder")}

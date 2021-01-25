@@ -482,6 +482,8 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories
 
                 entity.Property(e => e.ResourceId).HasColumnName("resourceId");
 
+                entity.Property(e => e.CreatedOn).HasColumnName("createdOn").HasColumnType("datetimeoffset");
+
                 entity.HasOne(d => d.LearningModule)
                     .WithMany()
                     .HasForeignKey(d => d.LearningModuleId)

@@ -57,7 +57,9 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories
                 .Include(x => x.Resource).ThenInclude(x => x.ResourceTag).ThenInclude(p => p.Tag)
                 .AsQueryable()
                 .Where(resourceModule => resourceModule.LearningModuleId == learningmoduleId)
-                .ToListAsync().ConfigureAwait(false);
+                .OrderByDescending(x => x.CreatedOn)
+                .ToListAsync()
+                .ConfigureAwait(false);
 
             return resourceModule.Select(resourceModule => resourceModule.Resource).Distinct();
         }

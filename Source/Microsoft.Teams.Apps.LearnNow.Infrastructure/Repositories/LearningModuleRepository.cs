@@ -64,20 +64,14 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories
             var learningModuleEntities = this.context.Set<LearningModule>()
                 .Include(x => x.Subject)
                 .Include(x => x.Grade)
-                .Include(x => x.LearningModuleTag).ThenInclude(p => p.Tag);
+                .Include(x => x.LearningModuleTag).ThenInclude(p => p.Tag).AsQueryable();
 
-            var baseEntitySets = from learningModule in learningModuleEntities
-                                 join learningModuleTag in this.context.Set<LearningModuleTag>()
-                                 on learningModule.Id equals learningModuleTag.LearningModuleId into grouping
-                                 from moduleTag in grouping.DefaultIfEmpty()
-                                 select new { learningModule, moduleTag };
-
-            var query = baseEntitySets;
+            var query = learningModuleEntities;
 
             if (exactMatch)
             {
 #pragma warning disable CA1307 // Ignoring StringComparison as EF handles the string comparison while building SQL query from LINQ expression. In case of explicit StringComparison addition, then it fails the SQL query execution with error.
-                return await query.Where(x => string.Equals(x.learningModule.Title, filterModel.SearchText)).Select(x => x.learningModule).AsNoTracking().ToListAsync().ConfigureAwait(false);
+                return await query.Where(x => string.Equals(x.Title, filterModel.SearchText)).AsNoTracking().ToListAsync().ConfigureAwait(false);
 #pragma warning restore CA1307 // Specify StringComparison
             }
 
@@ -103,33 +97,40 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories
 
             if (subjectIds != null && subjectIds.Any())
             {
-                query = query.Where(x => subjectIds.Contains(x.learningModule.SubjectId));
+                query = query.Where(x => subjectIds.Contains(x.SubjectId));
             }
 
             if (gradeIds != null && gradeIds.Any())
             {
-                query = query.Where(x => gradeIds.Contains(x.learningModule.GradeId));
+                query = query.Where(x => gradeIds.Contains(x.GradeId));
             }
 
             if (createdByObjectIds != null && createdByObjectIds.Any())
             {
-                query = query.Where(x => createdByObjectIds.Contains(x.learningModule.CreatedBy));
+                query = query.Where(x => createdByObjectIds.Contains(x.CreatedBy));
             }
 
             if (tagIds != null && tagIds.Any())
             {
-                query = query.Where(x => tagIds.Contains(x.moduleTag.TagId));
+                var withTagsQuery = from learningModule in learningModuleEntities
+                                     join learningModuleTag in this.context.Set<LearningModuleTag>()
+                                     on learningModule.Id equals learningModuleTag.LearningModuleId into grouping
+                                     from moduleTag in grouping.DefaultIfEmpty()
+                                     select new { learningModule, moduleTag };
+                withTagsQuery = withTagsQuery.Where(x => tagIds.Contains(x.moduleTag.TagId));
+                var tagsResult = await withTagsQuery.Skip(skip).Take(count).AsNoTracking().ToListAsync().ConfigureAwait(false);
+                return tagsResult.Select(x => x.learningModule);
             }
 
             if (!string.IsNullOrEmpty(filterModel.SearchText))
             {
 #pragma warning disable CA1307 // Ignoring StringComparison as EF handles the string comparison while building SQL query from LINQ expression. In case of explicit StringComparison addition, then it fails the SQL query execution with error.
-                query = query.Where(x => x.learningModule.Title.Contains(filterModel.SearchText));
+                query = query.Where(x => x.Title.Contains(filterModel.SearchText));
 #pragma warning restore CA1307 // Specify StringComparison
             }
 
-            var learningModules = await query.OrderByDescending(x => x.learningModule.UpdatedOn).Skip(skip).Take(count).AsNoTracking().ToListAsync().ConfigureAwait(false);
-            return learningModules.Select(x => x.learningModule);
+            var learningModules = await query.OrderByDescending(x => x.UpdatedOn).Skip(skip).Take(count).AsNoTracking().ToListAsync().ConfigureAwait(false);
+            return learningModules;
         }
 
         /// <summary>
@@ -226,11 +227,11 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories
         }
 
         /// <summary>
-        /// Gets learning module with votes and resources models.
+        /// Gets learning modules with votes and resources models.
         /// </summary>
         /// <param name="learningModules">Learning module entity object collection.</param>
         /// <returns>Returns a collection of learning module detail models.</returns>
-        public Dictionary<Guid, List<LearningModuleDetailModel>> GetModulesWithVoteAndResource(IEnumerable<LearningModule> learningModules)
+        public Dictionary<Guid, List<LearningModuleDetailModel>> GetModulesWithVotesAndResources(IEnumerable<LearningModule> learningModules)
         {
             learningModules = learningModules ?? throw new ArgumentNullException(nameof(learningModules));
 

@@ -53,9 +53,11 @@ const Tile: React.FunctionComponent<ITileProps> = props => {
 
     /**
     * Method gets called when popup item is clicked
+    * @param {String} item Menu item name clicked by user.
     */
-    const onPopUpItemClick = (item: string, id: string) => {
+    const onPopUpItemClick = (item: string) => {
         setIsPopUpOpen(false);
+        let id = props.resourceDetails.id;
         if (item === localize('addToUserList')) {
             props.handleAddToUserResourcesClick!(id);
         }
@@ -68,11 +70,9 @@ const Tile: React.FunctionComponent<ITileProps> = props => {
         else if (item === localize('deleteResourceText')) {
             props.handleDeleteClick!(id);
         }
-    }
-
-    const handleAddToLearningModuleClick = (resourceGradeId?: string, resourceSubjectId?: string, resourceid?: string) => {
-        setIsPopUpOpen(false);
-        props.handleAddToLearningModuleClick!(resourceGradeId, resourceSubjectId, resourceid)
+        else if (item === localize('addLearningModuleText')) {
+            props.handleAddToLearningModuleClick!(props.resourceDetails.gradeId, props.resourceDetails.subjectId, id);
+        }
     }
 
     /**
@@ -101,11 +101,11 @@ const Tile: React.FunctionComponent<ITileProps> = props => {
                                 <Image src={getFileImageFromFileName(resourceDetail?.attachmentUrl)} />
                                 <Flex column>
                                     <Flex>
-                                        <Text content={resourceDetail?.title} weight="bold" className="card-title" />
+                                        <Text content={resourceDetail?.title} weight="bold" className="card-title-resource" title={resourceDetail?.title} />
                                     </Flex>
                                     <Flex>
-                                        <Text content={resourceDetail?.subject?.subjectName?.toUpperCase()} className="card-subtitle-subject" />|
-                                        <Text content={resourceDetail?.grade?.gradeName?.toUpperCase()} className="card-subtitle-grade" />
+                                        <Text content={resourceDetail?.subject?.subjectName?.toUpperCase()} className="card-subtitle-subject tile-text-overflow" title={resourceDetail?.subject?.subjectName?.toUpperCase()} />|
+                                        <Text content={resourceDetail?.grade?.gradeName?.toUpperCase()} className="card-subtitle-grade tile-text-overflow" title={resourceDetail?.grade?.gradeName?.toUpperCase()} />
                                     </Flex>
                                 </Flex>
                             </Flex>
@@ -156,16 +156,17 @@ const Tile: React.FunctionComponent<ITileProps> = props => {
                                     onOpenChange={(e, { open }: any) => onOpenChange(open)}
                                     content={
                                         <>
-                                            {(props.userRole.isTeacher || props.userRole.isAdmin) && <p onClick={() => handleAddToLearningModuleClick!(resourceDetail.gradeId, resourceDetail.subjectId, resourceDetail.id)} className="cursor-pointer"><AddIcon size="small" outline className="popup-list-icon" />{localize('addLearningModuleText')}</p>}
-                                            {!props.isCreatedByFilter && <p onClick={() => onPopUpItemClick(localize('addToUserList'), resourceDetail.id)} className="cursor-pointer"><BookmarkIcon outline size="small" className="popup-list-icon" />{localize('addToUserList')}</p>}
-                                            {props.isCreatedByFilter && <p onClick={() => onPopUpItemClick(localize('removeFromUserList'), resourceDetail.id)} className="cursor-pointer"><TrashCanIcon outline size="small" className="popup-list-icon" />{localize('removeFromUserList')}</p>}
-                                            {((props.userRole.isTeacher && props.currentUserId === resourceDetail?.createdBy) || props.userRole.isAdmin) && <p onClick={() => onPopUpItemClick(localize('editResourceText'), resourceDetail.id)} className="cursor-pointer"><EditIcon outline size="small" className="popup-list-icon" />{localize('editResourceText')}</p>}
+                                            {(props.userRole.isTeacher || props.userRole.isAdmin) && <p onClick={() => onPopUpItemClick(localize('addLearningModuleText'))} className="cursor-pointer"><AddIcon size="small" outline className="popup-list-icon" />{localize('addLearningModuleText')}</p>}
+                                            {!props.isCreatedByFilter && <p onClick={() => onPopUpItemClick(localize('addToUserList'))} className="cursor-pointer"><BookmarkIcon outline size="small" className="popup-list-icon" />{localize('addToUserList')}</p>}
+                                            {props.isCreatedByFilter && <p onClick={() => onPopUpItemClick(localize('removeFromUserList'))} className="cursor-pointer"><TrashCanIcon outline size="small" className="popup-list-icon" />{localize('removeFromUserList')}</p>}
+                                            {((props.userRole.isTeacher && props.currentUserId === resourceDetail?.createdBy) || props.userRole.isAdmin) && <p onClick={() => onPopUpItemClick(localize('editResourceText'))} className="cursor-pointer"><EditIcon outline size="small" className="popup-list-icon" />{localize('editResourceText')}</p>}
                                             <Dialog
+                                                className = "delete-dialog-mobile"
                                                 cancelButton={localize('deleteResourceCancelButtonText')}
                                                 confirmButton={localize('deleteResourceConfirmButtonText')}
                                                 header={localize('deleteResourceHeaderText')}
                                                 content={localize('deleteResourceContentText')}
-                                                onConfirm={() => onPopUpItemClick(localize('deleteResourceText'), resourceDetail.id)}
+                                                onConfirm={() => onPopUpItemClick(localize('deleteResourceText'))}
                                                 trigger={((props.userRole.isTeacher && props.currentUserId === resourceDetail?.createdBy) || props.userRole.isAdmin) ? <p className="cursor-pointer"><TrashCanIcon outline size="small" className="popup-list-icon" />{localize('deleteResourceText')}</p> : <></>}
                                             />
                                         </>

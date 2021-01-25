@@ -65,7 +65,6 @@ export default class Resources {
 
     // The max screen width up to which mobile view to be active.
     public static readonly maxWidthForMobileView: number = 600;
-    public static readonly maxWidthForMobileViewForResource: number = 600;
     public static readonly threeColumnGrid: number = 3;
     public static readonly oneColumnGrid: number = 1;
     public static readonly fiveColumnGrid: number = 5;

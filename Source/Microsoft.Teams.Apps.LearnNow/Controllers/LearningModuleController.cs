@@ -123,7 +123,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 var skipRecords = page * Constants.LazyLoadPerPagePostCount;
 
                 var learningModules = await this.unitOfWork.LearningModuleRepository.GetLearningModulesAsync(filterModel, Constants.LazyLoadPerPagePostCount, skipRecords, exactMatch, excludeEmptyModules);
-                var moduleWithVotesAndResources = this.unitOfWork.LearningModuleRepository.GetModulesWithVoteAndResource(learningModules);
+                var moduleWithVotesAndResources = this.unitOfWork.LearningModuleRepository.GetModulesWithVotesAndResources(learningModules);
 
                 // Get userId and user display name.
                 var createdByObjectIds = learningModules.Select(module => module.CreatedBy).Distinct().Select(userObjectId => userObjectId.ToString());
@@ -249,11 +249,19 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 // Delete existing resource tag from storage.
                 this.unitOfWork.LearningModuleTagRepository.DeleteLearningModuleTag(existingLearningModuleDetails.LearningModuleTag);
 
-                // Delete existing resource module mapping from storage.
-                var existingResourceModuleMapping = await this.unitOfWork.ResourceModuleRepository.FindAsync(module => module.LearningModuleId == existingLearningModuleDetails.Id);
-                if (existingResourceModuleMapping.Any())
+                // Delete resource module mapping from storage.
+                var existingResourceModuleMappings = await this.unitOfWork.ResourceModuleRepository.FindAsync(module => module.LearningModuleId == existingLearningModuleDetails.Id);
+                if (existingResourceModuleMappings.Any() && moduleResourceDetails.Resources.Count() < existingResourceModuleMappings.Count())
                 {
-                    this.unitOfWork.ResourceModuleRepository.DeleteResourceModuleMappings(existingResourceModuleMapping);
+                    var resourceModuleMappingsToRetain = moduleResourceDetails.Resources;
+                    foreach (var resourceModuleMapping in existingResourceModuleMappings)
+                    {
+                        var resourceMapping = resourceModuleMappingsToRetain.FirstOrDefault(k => k.Id == resourceModuleMapping.ResourceId);
+                        if (resourceMapping == null)
+                        {
+                            this.unitOfWork.ResourceModuleRepository.Delete(resourceModuleMapping);
+                        }
+                    }
                 }
 
                 // Update learning module details to storage.
@@ -269,20 +277,6 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 List<LearningModuleTag> learningModuleTags = resourceTag.Select(x => new LearningModuleTag { LearningModuleId = learningModuleEntityModel.Id, TagId = x.TagId }).ToList();
 
                 this.unitOfWork.LearningModuleTagRepository.AddLearningModuleTag(learningModuleTags);
-
-                List<ResourceModuleMapping> resourceModuleMappings = new List<ResourceModuleMapping>();
-                foreach (var resource in moduleResourceDetails.Resources)
-                {
-                    ResourceModuleMapping resourceModuleMapping = new ResourceModuleMapping
-                    {
-                        ResourceId = resource.Id,
-                        LearningModuleId = id,
-                    };
-                    resourceModuleMappings.Add(resourceModuleMapping);
-                }
-
-                // Add resource and module mapping
-                this.unitOfWork.ResourceModuleRepository.AddResourceModuleMappings(resourceModuleMappings);
 
                 await this.unitOfWork.SaveChangesAsync();
                 this.RecordEvent("Learning module - HTTP patch call succeeded.", RequestType.Succeeded);
@@ -421,7 +415,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 var learningModuleViewModel = this.learningModuleMapper.MapToViewModel(learningModule, this.UserObjectId, learningModuleVotes);
                 var resources = await this.unitOfWork.ResourceModuleRepository.FindResourcesForModuleAsync(id);
                 resources = resources.Reverse();
-                var resourcesWithVote = this.unitOfWork.ResourceRepository.GetResourcesWithVote(resources);
+                var resourcesWithVote = this.unitOfWork.ResourceRepository.GetResourcesWithVotes(resources);
                 var resourceViewModels = this.resourceMapper.MapToViewModels(resourcesWithVote, this.UserObjectId);
 
                 var moduleResourceViewModel = new ModuleResourceViewModel
@@ -601,10 +595,10 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
             try
             {
                 var resourceDetailsEntity = await this.unitOfWork.ResourceModuleRepository.FindResourcesForModuleAsync(id);
-                var resourcesWithVote = this.unitOfWork.ResourceRepository.GetResourcesWithVote(resourceDetailsEntity);
+                var resourcesWithVote = this.unitOfWork.ResourceRepository.GetResourcesWithVotes(resourceDetailsEntity);
 
                 // Get userId and user display name.
-                IEnumerable<string> userAADObjectIds = resourceDetailsEntity.Select(resource => resource.UpdatedBy.ToString()).Distinct();
+                IEnumerable<string> userAADObjectIds = resourceDetailsEntity.Select(resource => resource.CreatedBy.ToString()).Distinct();
 
                 IEnumerable<UserDetail> userDetails = new List<UserDetail>();
                 if (userAADObjectIds.Any())

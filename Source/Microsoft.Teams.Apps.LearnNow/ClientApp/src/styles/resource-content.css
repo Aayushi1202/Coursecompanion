@@ -154,7 +154,7 @@
 }
 
 .file-attachment-width-preview {
-    width: 60% !important;
+    width: 100% !important;
     overflow-wrap: anywhere;
 }
 
@@ -279,8 +279,18 @@
         height: 21.3rem !important;
     }
 
-    .tag-dropdown-input {
-        width: 34rem !important;
+
+
+    .attachment-text-overflow .ui-attachment__header {
+        text-overflow: ellipsis;
+        max-width: 10rem;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .file-attachment-width-preview {
+        width: 100% !important;
+        overflow-wrap: anywhere;
     }
 }
 
@@ -359,4 +369,22 @@
     position: absolute;
     width: 91vw;
     bottom: 3rem;
+}
+
+.attachment-text-overflow .ui-attachment__header {
+    text-overflow: ellipsis;
+    max-width: 24rem;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.tag-padding
+{
+    padding-bottom:0.5rem;
+}
+
+@media (max-width: 550px) {
+    .tag-dropdown-input {
+        width: 30rem !important;
+    }
 }

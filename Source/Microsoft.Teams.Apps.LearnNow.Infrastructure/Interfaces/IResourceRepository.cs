@@ -56,10 +56,10 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure
         Task<IEnumerable<Guid>> GetCreatedByObjectIdsAsync(int createdByObjectIdCountToFetch);
 
         /// <summary>
-        /// Get resource with votes.
+        /// Get resources with votes.
         /// </summary>
         /// <param name="resources">Resource collection.</param>
         /// <returns>Returns resource detail model collection.</returns>
-        Dictionary<Guid, List<ResourceDetailModel>> GetResourcesWithVote(IEnumerable<Resource> resources);
+        Dictionary<Guid, List<ResourceDetailModel>> GetResourcesWithVotes(IEnumerable<Resource> resources);
     }
 }

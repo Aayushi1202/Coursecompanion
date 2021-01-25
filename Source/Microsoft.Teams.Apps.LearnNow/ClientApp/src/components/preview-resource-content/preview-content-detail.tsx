@@ -245,11 +245,12 @@ class PreviewContentDetail extends React.Component<WithTranslation, IPreviewCont
                                 </Flex.Item>
                                 <Flex.Item push>
                                     {
-                                        this.state.isVoteDisabled === false ?
+                                        this.state.isVoteDisabled ?
+                                            <Loader size="small" />
+                                            :
                                             <>
                                                 {resourceDetails?.isLikedByUser ? <LikeIcon outline={false} className="vote-icon-filled cursor-pointer" onClick={() => this.OnVoteClick(resourceDetails?.id)} disabled={this.state.isVoteDisabled} title={this.localize('likeButtonText')} size="larger" /> : <LikeIcon outline={true} className="vote-icon cursor-pointer" onClick={() => this.OnVoteClick(resourceDetails?.id)} disabled={this.state.isVoteDisabled} title={this.localize('likeButtonText')} size="larger"/>}
                                             </>
-                                            : <Loader size="small" />
                                     }
                                 </Flex.Item>
                             </Flex>

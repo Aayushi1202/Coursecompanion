@@ -487,7 +487,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                     userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), createdByObjectIds);
                 }
 
-                var resourcesWithVote = this.unitOfWork.ResourceRepository.GetResourcesWithVote(resources);
+                var resourcesWithVote = this.unitOfWork.ResourceRepository.GetResourcesWithVotes(resources);
                 var resourceDetails = this.resourceMapper.MapToViewModels(
                     resourcesWithVote,
                     this.UserObjectId,

@@ -197,14 +197,14 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 }
 
                 // Post userId and user display name.
-                var userAADObjectIds = learningModules.Select(resource => resource.UpdatedBy).Distinct().Select(userObjectId => userObjectId.ToString());
+                var userAADObjectIds = learningModules.Select(resource => resource.CreatedBy).Distinct().Select(userObjectId => userObjectId.ToString());
                 IEnumerable<UserDetail> userDetails = new List<UserDetail>();
                 if (userAADObjectIds.Any())
                 {
                     userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
                 }
 
-                var moduleWithVotesAndResources = this.unitOfWork.LearningModuleRepository.GetModulesWithVoteAndResource(learningModules);
+                var moduleWithVotesAndResources = this.unitOfWork.LearningModuleRepository.GetModulesWithVotesAndResources(learningModules);
 
                 var learningModuleDetails = this.learningModuleMapper.MapToViewModels(
                     moduleWithVotesAndResources,

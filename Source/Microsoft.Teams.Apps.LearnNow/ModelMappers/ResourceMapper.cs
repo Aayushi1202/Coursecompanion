@@ -88,7 +88,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 UpdatedOn = DateTimeOffset.Now,
                 IsLikedByUser = false,
                 VoteCount = 0,
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == resource.UpdatedBy).DisplayName,
+                UserDisplayName = userDetails.ToList().Find(user => user.UserId == resource.CreatedBy).DisplayName,
             };
         }
 
@@ -217,27 +217,28 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
 
             foreach (var resource in filteredResources)
             {
+                var resources = resource.Value.FirstOrDefault();
                 resourceDetails.Add(new ResourceViewModel()
                 {
                     Id = resource.Key,
-                    Title = resource.Value.FirstOrDefault()?.Title,
-                    VoteCount = (int)resource.Value.FirstOrDefault()?.Votes?.Count(),
-                    IsLikedByUser = (bool)resource.Value.FirstOrDefault()?.Votes?.Any(v => v.UserId == userAadObjectId),
-                    Description = resource.Value.FirstOrDefault()?.Description,
-                    GradeId = (Guid)resource.Value.FirstOrDefault().GradeId,
-                    SubjectId = (Guid)resource.Value.FirstOrDefault().SubjectId,
-                    Subject = resource.Value.FirstOrDefault()?.Subject,
-                    Grade = resource.Value.FirstOrDefault()?.Grade,
-                    ImageUrl = resource.Value.FirstOrDefault()?.ImageUrl,
-                    LinkUrl = resource.Value.FirstOrDefault()?.LinkUrl,
-                    AttachmentUrl = resource.Value.FirstOrDefault()?.AttachmentUrl,
-                    ResourceType = (int)resource.Value.FirstOrDefault()?.ResourceType,
-                    ResourceTag = resource.Value.FirstOrDefault()?.ResourceTag,
-                    CreatedBy = (Guid)resource.Value.FirstOrDefault()?.CreatedBy,
-                    UpdatedBy = (Guid)resource.Value.FirstOrDefault()?.UpdatedBy,
-                    CreatedOn = resource.Value.FirstOrDefault()?.CreatedOn,
-                    UpdatedOn = resource.Value.FirstOrDefault()?.UpdatedOn,
-                    UserDisplayName = userDetails.ToList().Find(user => user.UserId == resource.Value.FirstOrDefault()?.CreatedBy)?.DisplayName,
+                    Title = resources.Title,
+                    VoteCount = (int)resources.Votes?.Count(),
+                    IsLikedByUser = (bool)resources.Votes?.Any(v => v.UserId == userAadObjectId),
+                    Description = resources.Description,
+                    GradeId = (Guid)resources.GradeId,
+                    SubjectId = (Guid)resources.SubjectId,
+                    Subject = resources.Subject,
+                    Grade = resources.Grade,
+                    ImageUrl = resources.ImageUrl,
+                    LinkUrl = resources.LinkUrl,
+                    AttachmentUrl = resources.AttachmentUrl,
+                    ResourceType = (int)resources.ResourceType,
+                    ResourceTag = resources.ResourceTag,
+                    CreatedBy = (Guid)resources.CreatedBy,
+                    UpdatedBy = (Guid)resources.UpdatedBy,
+                    CreatedOn = resources.CreatedOn,
+                    UpdatedOn = resources.UpdatedOn,
+                    UserDisplayName = userDetails.ToList().Find(user => user.UserId == resources.CreatedBy)?.DisplayName,
                 });
             }
 
@@ -260,26 +261,27 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
 
             foreach (var resource in filteredResources)
             {
+                var resources = resource.Value.FirstOrDefault();
                 resourceDetails.Add(new ResourceViewModel()
                 {
                     Id = resource.Key,
-                    Title = resource.Value.FirstOrDefault()?.Title,
-                    VoteCount = (int)resource.Value.FirstOrDefault().Votes?.Count(),
-                    IsLikedByUser = (bool)resource.Value.FirstOrDefault().Votes?.Any(v => v.UserId == userAadObjectId),
-                    Description = resource.Value.FirstOrDefault()?.Description,
-                    GradeId = (Guid)resource.Value.FirstOrDefault().GradeId,
-                    SubjectId = (Guid)resource.Value.FirstOrDefault().SubjectId,
-                    Subject = resource.Value.FirstOrDefault()?.Subject,
-                    Grade = resource.Value.FirstOrDefault()?.Grade,
-                    ImageUrl = resource.Value.FirstOrDefault()?.ImageUrl,
-                    LinkUrl = resource.Value.FirstOrDefault()?.LinkUrl,
-                    AttachmentUrl = resource.Value.FirstOrDefault()?.AttachmentUrl,
-                    ResourceType = (int)resource.Value.FirstOrDefault()?.ResourceType,
-                    ResourceTag = resource.Value.FirstOrDefault()?.ResourceTag,
-                    CreatedBy = (Guid)resource.Value.FirstOrDefault()?.CreatedBy,
-                    UpdatedBy = (Guid)resource.Value.FirstOrDefault()?.UpdatedBy,
-                    CreatedOn = resource.Value.FirstOrDefault()?.CreatedOn,
-                    UpdatedOn = resource.Value.FirstOrDefault()?.UpdatedOn,
+                    Title = resources.Title,
+                    VoteCount = (int)resources.Votes.Count(),
+                    IsLikedByUser = (bool)resources.Votes.Any(v => v.UserId == userAadObjectId),
+                    Description = resources.Description,
+                    GradeId = (Guid)resources.GradeId,
+                    SubjectId = (Guid)resources.SubjectId,
+                    Subject = resources.Subject,
+                    Grade = resources.Grade,
+                    ImageUrl = resources.ImageUrl,
+                    LinkUrl = resources.LinkUrl,
+                    AttachmentUrl = resources.AttachmentUrl,
+                    ResourceType = (int)resources.ResourceType,
+                    ResourceTag = resources.ResourceTag,
+                    CreatedBy = (Guid)resources.CreatedBy,
+                    UpdatedBy = (Guid)resources.UpdatedBy,
+                    CreatedOn = resources.CreatedOn,
+                    UpdatedOn = resources.UpdatedOn,
                 });
             }
 

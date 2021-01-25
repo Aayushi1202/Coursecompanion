@@ -170,7 +170,7 @@ class SelectImagePage extends React.Component<ISelectImagePageProps, IPreviewIma
         if (this.props.imageArray.length > 0) {
             return (
                 <div className="tab-container">
-                    <Grid accessibility={gridBehavior} columns={this.props.windowWidth >= Resources.maxWidthForMobileViewForResource ? Resources.fiveColumnGrid : Resources.threeColumnGrid} content={this.props.imageArray ? this.props.imageArray : this.state.imageArray} className="grid-ui" />
+                    <Grid accessibility={gridBehavior} columns={this.props.windowWidth >= Resources.maxWidthForMobileView ? Resources.fiveColumnGrid : Resources.threeColumnGrid} content={this.props.imageArray ? this.props.imageArray : this.state.imageArray} className="grid-ui" />
                     <br />
                 </div>)
         } else {

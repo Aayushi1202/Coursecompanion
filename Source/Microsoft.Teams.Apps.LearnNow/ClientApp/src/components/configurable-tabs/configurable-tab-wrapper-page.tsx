@@ -8,7 +8,7 @@ import { Loader, Grid, gridBehavior } from '@fluentui/react-northstar'
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
 import { IResourceDetail } from "../../model/type";
-import { userUpVoteResource, userDownVoteResource,  getResourcesForModule } from '../../api/resource-api'
+import { userUpVoteResource, userDownVoteResource,  getResourcesForModule, getResource } from '../../api/resource-api'
 import Tile from "../discover-tab/tile"
 import NoPostAddedPage from "./no-post-added-page"
 import Resources from '../../constants/resources';
@@ -23,6 +23,7 @@ interface IConfigurableTeamsPageState {
     allResources: IResourceDetail[];
     loading: boolean;
     isValidUser: boolean;
+    clickedResourceId: string;
 }
 
 /**
@@ -45,6 +46,7 @@ class ConfigurableTeamsPage extends React.Component<WithTranslation, IConfigurab
             allResources: [],
             loading: true,
             isValidUser: false,
+            clickedResourceId:"",
         }
     }
 
@@ -86,6 +88,7 @@ class ConfigurableTeamsPage extends React.Component<WithTranslation, IConfigurab
     */
     private handlePreviewClick = (resourceId: string) => {
         let appBaseUrl = window.location.origin;
+        this.setState({clickedResourceId: resourceId});
         microsoftTeams.tasks.startTask({
             completionBotId: this.botId,
             title: this.localize('previewContentTaskModuleHeaderText'),
@@ -93,8 +96,28 @@ class ConfigurableTeamsPage extends React.Component<WithTranslation, IConfigurab
             width: Resources.taskModuleWidth,
             url: `${appBaseUrl}/previewcontent?viewMode=1&resourceId=${resourceId}`,
             fallbackUrl: `${appBaseUrl}/previewcontent?viewMode=1&resourceId=${resourceId}`,
-        });
+        }, this.previewClickSubmitHandler);
     }
+
+    /**
+    * Preview resource content task module handler.
+    */
+    private previewClickSubmitHandler = async () => {
+        let resourceId = this.state.clickedResourceId;
+        const resourceDetailsResponse = await getResource(resourceId);
+        if (resourceDetailsResponse !== null && resourceDetailsResponse.data) {
+            let resourceDetail: IResourceDetail = resourceDetailsResponse.data
+            let allResources = this.state.allResources.map((resource: IResourceDetail) => ({ ...resource }));
+            let resourceIndex = allResources.findIndex((resource: IResourceDetail) => resource.id === resourceId);
+            let existingResourceDetail = allResources[resourceIndex];
+            if (existingResourceDetail.isLikedByUser !== resourceDetail.isLikedByUser) {
+                existingResourceDetail.isLikedByUser = resourceDetail.isLikedByUser;
+                resourceDetail.isLikedByUser ? existingResourceDetail.voteCount!++ : existingResourceDetail.voteCount!--;
+            };
+            allResources[resourceIndex] = existingResourceDetail;
+            this.setState({ allResources: allResources });
+        }
+    };
 
     /**
     * Get all resource based on current page count. 

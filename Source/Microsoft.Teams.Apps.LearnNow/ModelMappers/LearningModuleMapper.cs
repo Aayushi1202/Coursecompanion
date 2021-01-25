@@ -81,7 +81,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 IsLikedByUser = false,
                 VoteCount = 0,
                 ResourceCount = 0,
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == learningModule.UpdatedBy).DisplayName,
+                UserDisplayName = userDetails.ToList().Find(user => user.UserId == learningModule.CreatedBy).DisplayName,
             };
         }
 
@@ -172,25 +172,26 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
             var learningModuleDetails = new List<LearningModuleViewModel>();
             foreach (var learningModule in moduleWithVotesAndResources)
             {
+                var module = learningModule.Value.FirstOrDefault();
                 learningModuleDetails.Add(new LearningModuleViewModel()
                 {
                     Id = learningModule.Key,
-                    Title = learningModule.Value.FirstOrDefault()?.Title,
-                    VoteCount = (int)learningModule.Value.FirstOrDefault().Votes.Count(),
-                    IsLikedByUser = (bool)learningModule.Value.FirstOrDefault()?.Votes?.Any(v => v.UserId == userAadObjectId),
-                    Description = learningModule.Value.FirstOrDefault()?.Description,
-                    GradeId = (Guid)learningModule.Value.FirstOrDefault().GradeId,
-                    SubjectId = (Guid)learningModule.Value.FirstOrDefault().SubjectId,
-                    Subject = learningModule.Value.FirstOrDefault()?.Subject,
-                    Grade = learningModule.Value.FirstOrDefault()?.Grade,
-                    ImageUrl = learningModule.Value.FirstOrDefault()?.ImageUrl,
-                    CreatedBy = (Guid)learningModule.Value.FirstOrDefault()?.CreatedBy,
-                    UpdatedBy = (Guid)learningModule.Value.FirstOrDefault()?.UpdatedBy,
-                    CreatedOn = learningModule.Value.FirstOrDefault()?.CreatedOn,
-                    UpdatedOn = learningModule.Value.FirstOrDefault()?.UpdatedOn,
-                    LearningModuleTag = learningModule.Value.FirstOrDefault()?.LearningModuleTag,
-                    UserDisplayName = userDetails.ToList().Find(user => user.UserId == learningModule.Value.FirstOrDefault()?.CreatedBy)?.DisplayName,
-                    ResourceCount = (int)learningModule.Value.FirstOrDefault()?.ResourceModuleMappings.Count(),
+                    Title = module.Title,
+                    VoteCount = (int)module.Votes.Count(),
+                    IsLikedByUser = (bool)module.Votes?.Any(v => v.UserId == userAadObjectId),
+                    Description = module.Description,
+                    GradeId = (Guid)module.GradeId,
+                    SubjectId = (Guid)module.SubjectId,
+                    Subject = module.Subject,
+                    Grade = module.Grade,
+                    ImageUrl = module.ImageUrl,
+                    CreatedBy = (Guid)module.CreatedBy,
+                    UpdatedBy = (Guid)module.UpdatedBy,
+                    CreatedOn = module.CreatedOn,
+                    UpdatedOn = module.UpdatedOn,
+                    LearningModuleTag = module.LearningModuleTag,
+                    UserDisplayName = userDetails.ToList().Find(user => user.UserId == (Guid)module.CreatedBy).DisplayName,
+                    ResourceCount = (int)module.ResourceModuleMappings.Count(),
                 });
             }
 

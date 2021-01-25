@@ -51,10 +51,10 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure
         Task<IEnumerable<Guid>> GetCreatedByObjectIdsAsync(int createdByObjectIdCountToFetch);
 
         /// <summary>
-        /// Gets learning module with votes and resources.
+        /// Gets learning modules with votes and resources.
         /// </summary>
         /// <param name="learningModules">Learning module entity object collection.</param>
         /// <returns>Returns a collection of learning module detail models.</returns>
-        Dictionary<Guid, List<LearningModuleDetailModel>> GetModulesWithVoteAndResource(IEnumerable<LearningModule> learningModules);
+        Dictionary<Guid, List<LearningModuleDetailModel>> GetModulesWithVotesAndResources(IEnumerable<LearningModule> learningModules);
     }
 }

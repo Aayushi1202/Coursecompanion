@@ -8,6 +8,7 @@ import CheckboxBase from "./checkbox-base-learning-module";
 import { useTranslation } from "react-i18next";
 import { getFileImageFromFileName } from '../../helpers/helper';
 import { resourceTableStyle } from "../../constants/customize.styled";
+import Resources from "../../constants/resources";
 
 import "../../styles/admin-configure-wrapper-page.css";
 import "../../styles/learning-module.css";
@@ -16,6 +17,7 @@ interface ILearningModuleResourceTableProps {
     responsesData: any[];
     onCheckBoxChecked: (responseId: string, isChecked: boolean) => void;
     isGradeSubjectDisable?: boolean;
+    windowWidth: number
 }
 
 /**
@@ -77,9 +79,14 @@ const getresourceTable = (learningModuleProps: any) => {
                             <Flex>
                                 <Flex.Item>
                                     <div className="preview-file-icon">
-                                        <Image
-                                            src={getFileImageFromFileName(value.attachmentUrl)}
-                                        />
+                                        {
+                                            learningModuleProps.windowWidth! >= Resources.maxWidthForMobileView ?
+                                                <Image
+                                                    src={getFileImageFromFileName(value.attachmentUrl)}
+                                                />
+                                                :
+                                                <></>
+                                        }
                                     </div>
                                 </Flex.Item>
                                 <Flex.Item>
@@ -94,9 +101,9 @@ const getresourceTable = (learningModuleProps: any) => {
                                         <Flex>
                                             <Text
                                                 className="subject-name"
-                                                content={value.subject?.subjectName + " | "}
+                                                content={value.subject?.subjectName}
                                                 weight="semibold"
-                                            />
+                                            /> |
                                             <Text
                                                 className="grade-name"
                                                 content={"" + value.grade?.gradeName}
@@ -105,14 +112,18 @@ const getresourceTable = (learningModuleProps: any) => {
                                     </div>
                                 </Flex.Item>
                             </Flex>
+                            {learningModuleProps.screenWidth! >= Resources.maxWidthForMobileView ?
+                                <Flex>
+                                    <Text
+                                        className="resource-description-table"
+                                        title={value.description}
+                                        content={value.description}
+                                    />
 
-                            <Flex>
-                                <Text
-                                    className="resource-description-table"
-                                    title={value.description}
-                                    content={value.description}
-                                />
-                            </Flex>
+                                </Flex>
+                                :
+                                <Flex></Flex>
+                            }
                         </div>
                     ),
                     className: "resource-data",

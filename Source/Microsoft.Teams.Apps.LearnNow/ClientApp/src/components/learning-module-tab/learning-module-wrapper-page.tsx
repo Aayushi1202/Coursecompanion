@@ -7,8 +7,8 @@ import * as microsoftTeams from "@microsoft/teams-js";
 import { Loader, Grid, gridBehavior } from '@fluentui/react-northstar'
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
-import { ILearningModuleDetail, ISubject, IGrade, ICreatedBy, ITag, IFilterModel, IFilterRequestModel, NotificationType, IUserRole } from "../../model/type";
-import { deleteLearningModule, getAuthors, userDownVoteLearningModule, userUpVoteLearningModule, getLearningModules } from '../../api/learning-module-api';
+import { ILearningModuleDetail, ISubject, IGrade, ICreatedBy, ITag, IFilterModel, IFilterRequestModel, NotificationType, IUserRole, IModuleResourceViewModel } from "../../model/type";
+import { deleteLearningModule, getAuthors, userDownVoteLearningModule, userUpVoteLearningModule, getLearningModules, getLearningModule } from '../../api/learning-module-api';
 import InfiniteScroll from 'react-infinite-scroller';
 import LearningModuleTile from "./learning-module-tile"
 import FilterNoPostContentPage from "../discover-tab/filter-no-post-content-page";
@@ -54,6 +54,7 @@ interface ILearningModulePageState {
     isGradeFilterCountValid: boolean;
     isSubjectFilterCountValid: boolean;
     isCreatedByFilterCountValid: boolean;
+    clickedModuleId: string;
 }
 
 /**
@@ -112,7 +113,8 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
             isTagsFilterCountValid: true,
             isGradeFilterCountValid: true,
             isSubjectFilterCountValid: true,
-            isCreatedByFilterCountValid: true
+            isCreatedByFilterCountValid: true,
+            clickedModuleId: "",
         }
     }
 
@@ -355,6 +357,7 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
     */
     private handlePreviewClick = (learningModuleId: string) => {
         let appBaseUrl = window.location.origin;
+        this.setState({clickedModuleId : learningModuleId});
         microsoftTeams.tasks.startTask({
             completionBotId: this.botId,
             title: this.localize('previewContentLMTaskModuleHeaderText'),
@@ -362,8 +365,29 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
             width: Resources.taskModuleWidth,
             url: `${appBaseUrl}/learningmodulepreview?viewMode=1&learningModuleId=${learningModuleId}`,
             fallbackUrl: `${appBaseUrl}/learningmodulepreview?viewMode=1&learningModuleId=${learningModuleId}`,
-        });
+        }, this.previewClickSubmitHandler);
     }
+
+    /**
+    * Preview module content task module handler.
+    */
+    private previewClickSubmitHandler = async () => {
+        let moduleId = this.state.clickedModuleId;
+        const moduleDetailsResponse = await getLearningModule(moduleId);
+        if (moduleDetailsResponse !== null && moduleDetailsResponse.data) {
+            let moduleDetailsResponseData: IModuleResourceViewModel = moduleDetailsResponse.data;
+            let moduleDetail = moduleDetailsResponseData.learningModule;
+            let allLearningModules = this.state.allLearningModules.map((module: ILearningModuleDetail) => ({ ...module }));
+            let moduleIndex = allLearningModules.findIndex((module: ILearningModuleDetail) => module.id === moduleId);
+            let existingModuleDetail = allLearningModules[moduleIndex];
+            if (existingModuleDetail.isLikedByUser !== moduleDetail.isLikedByUser) {
+                existingModuleDetail.isLikedByUser = moduleDetail.isLikedByUser;
+                moduleDetail.isLikedByUser ? existingModuleDetail.voteCount!++ : existingModuleDetail.voteCount!--;
+            };
+            allLearningModules[moduleIndex] = existingModuleDetail;
+            this.setState({ allLearningModules: allLearningModules });
+        }
+    };
 
     /**
     * Add learningModule to private list.
@@ -433,7 +457,7 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
     private onGradeCheckboxStateChange = (selectedCheckboxes: Array<ICheckBoxItem>) => {
         this.userSetting.gradeIds = [];
         let selectedGrades: Array<ICheckBoxItem> = selectedCheckboxes.filter((checkboxItem: ICheckBoxItem) => {
-            return checkboxItem.isChecked === true;
+            return checkboxItem.isChecked ;
         });
 
         this.userSetting.gradeIds = selectedGrades.map((gradeCheckboxItem: ICheckBoxItem) => gradeCheckboxItem.id);
@@ -448,7 +472,7 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
     private onSubjectCheckboxStateChange = (selectedCheckboxes: Array<ICheckBoxItem>) => {
         this.userSetting.subjectIds = [];
         let selectedSubjects: Array<ICheckBoxItem> = selectedCheckboxes.filter((checkboxItem: ICheckBoxItem) => {
-            return checkboxItem.isChecked === true;
+            return checkboxItem.isChecked;
         });
 
         this.userSetting.subjectIds = selectedSubjects.map((subjectCheckboxItem: ICheckBoxItem) => subjectCheckboxItem.id);
@@ -463,7 +487,7 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
     private onTagsCheckboxStateChange = (selectedCheckboxes: Array<ICheckBoxItem>) => {
         this.userSetting.tagIds = [];
         let selectedTags: Array<ICheckBoxItem> = selectedCheckboxes.filter((checkboxItem: ICheckBoxItem) => {
-            return checkboxItem.isChecked === true;
+            return checkboxItem.isChecked ;
         });
 
         this.userSetting.tagIds = selectedTags.map((tagCheckboxItem: ICheckBoxItem) => tagCheckboxItem.id);
@@ -477,7 +501,7 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
     private onAddedByCheckboxStateChange = (selectedCheckboxes: Array<ICheckBoxItem>) => {
         this.userSetting.createdByObjectIds = [];
         let selectedAuthors: Array<ICheckBoxItem> = selectedCheckboxes.filter((checkboxItem: ICheckBoxItem) => {
-            return checkboxItem.isChecked === true;
+            return checkboxItem.isChecked;
         });
 
         this.userSetting.createdByObjectIds = selectedAuthors.map((createdByCheckboxItem: ICheckBoxItem) => createdByCheckboxItem.id);
@@ -714,24 +738,17 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
 
         // Cards component array to be rendered on grid.
         const cards = new Array<JSX.Element>();
-        const tiles = new Array<JSX.Element>();
-        let allLearningModules = this.state.allLearningModules.map((module: ILearningModuleDetail) => ({ ...module }));
-        allLearningModules.forEach((learningModule: ILearningModuleDetail) => {
-
-            tiles.push(
-                <LearningModuleTile index={learningModule.id}
-                    learningModuleDetails={learningModule}
-                    handleEditClick={this.handleEditClick}
-                    handlePreviewClick={this.handlePreviewClick}
-                    handleVoteClick={this.handleVoteClick}
-                    currentUserId={this.userAADObjectId!}
-                    userRole={this.state.userRole}
-                    handleDeleteClick={this.handleDeleteClick}
-                    handleAddToUserModuleClick={this.handleAddToUserModuleClick}
-                    isPrivateListTab={false}
-                />
-            )
-        });
+        const tiles = this.state.allLearningModules.map((learningModule: ILearningModuleDetail) => (<LearningModuleTile index={learningModule.id}
+            learningModuleDetails={learningModule}
+            handleEditClick={this.handleEditClick}
+            handlePreviewClick={this.handlePreviewClick}
+            handleVoteClick={this.handleVoteClick}
+            currentUserId={this.userAADObjectId!}
+            userRole={this.state.userRole}
+            handleDeleteClick={this.handleDeleteClick}
+            handleAddToUserModuleClick={this.handleAddToUserModuleClick}
+            isPrivateListTab={false}
+        />));
 
         if (tiles.length > 0) {
             cards.push(
@@ -791,7 +808,7 @@ class LearningModulePage extends React.Component<WithTranslation, ILearningModul
                                     useWindow={false}
                                     loader={<div className="loader"><Loader /></div>}>
                                     {
-                                        cards.length ? cards : (this.state.hasMorePosts === true ?
+                                        tiles.length ? cards : (this.state.hasMorePosts ?
                                             <></> : (this.state.isFilterApplied ? < FilterNoPostContentPage /> : <NoPostAddedPage handleAddNewResource={this.handleAddNewLearningModuleClick} isValidUser={(this.state.userRole.isAdmin || this.state.userRole.isTeacher)} />))
                                     }
                                 </InfiniteScroll>

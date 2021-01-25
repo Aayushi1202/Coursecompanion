@@ -15,12 +15,12 @@ import NotificationMessage from '../notification-message/notification-message';
 import Resources from '../../constants/resources';
 import { searchUserResources, createUserResource, deleteUserResource } from '../../api/user-resource-api';
 import { getUserRole } from '../../api/member-validation-api';
-import { deleteResource, userDownVoteResource, userUpVoteResource } from '../../api/resource-api';
+import { deleteResource, getResource, userDownVoteResource, userUpVoteResource } from '../../api/resource-api';
 import "../../styles/site.css";
 import "../../styles/tile.css";
 
 interface IYourLearningResourcePageState {
-    windowScreenWidth: number;
+    windowWidth: number;
     alertMessage: string;
     alertType: NotificationType;
     showAlert: boolean;
@@ -33,7 +33,8 @@ interface IYourLearningResourcePageState {
     isCreatedByFilter: boolean;
     searchText: string;
     showPostLoader: boolean;
-    userRoleDetails: IUserRole
+    userRoleDetails: IUserRole;
+    clickedResourceId: string;
 }
 
 /**
@@ -50,7 +51,7 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
         super(props);
         this.localize = this.props.t;
         this.state = {
-            windowScreenWidth: window.innerWidth,
+            windowWidth: window.innerWidth,
             alertMessage: "",
             alertType: 0,
             showAlert: false,
@@ -67,6 +68,7 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
                 isAdmin: false,
                 isTeacher: false
             },
+            clickedResourceId:"",
         }
 
         this.history = props.history;
@@ -114,8 +116,8 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
     * get screen width real time
     */
     private update = () => {
-        if (window.innerWidth !== this.state.windowScreenWidth) {
-            this.setState({ windowScreenWidth: window.innerWidth });
+        if (window.innerWidth !== this.state.windowWidth) {
+            this.setState({ windowWidth: window.innerWidth });
         }
     };
 
@@ -136,30 +138,31 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
     }
 
     /**
-    * handleAddToLearningModuleClick content task module handler.
-    * @param {string | any} err  Task module submit handler error message.
-    * @param {string | any} module  Task module submit handler result.
+    * Edit resource content task module handler.
+    * @param {Any} err resource task module error
+    * @param {Any} module resource response data
     */
-    private editResourceSubmitHandler = async (err: string | any, module: string | any) => {
+    private editResourceSubmitHandler = async (err: any, module: any) => {
         if (err) {
-            return ""
+            return "";
         }
         let title = module["title"];
-        let isSuccess = module["isSuccess"] === Resources.successFlag ? true : false
+        let isSuccess = module["isSuccess"] === Resources.successFlag;
 
         if (module && title && isSuccess) {
-            this.showAlert(this.localize("postUpdateSuccess", { "resourceName": title }), NotificationType.Success)
-            let saveResponse = module["saveResponse"]
+            this.showAlert(this.localize("postUpdateSuccess", { "resourceName": title }), NotificationType.Success);
+            let saveResponse = module["saveResponse"];
             let allFilteredResource = this.state.allResources.filter((resource: IResourceDetail) => {
-                return resource.id !== module.id;
+                return resource.id !== saveResponse.id;
             });
+
             allFilteredResource.unshift(saveResponse);
             this.setState({
                 allResources: allFilteredResource
             });
         }
         else {
-            this.showAlert(this.localize("postErrorMessage", { "resourceName": title }), NotificationType.Failure)
+            this.showAlert(this.localize("postErrorMessage", { "resourceName": title }), NotificationType.Failure);
         }
     };
 
@@ -182,6 +185,7 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
     */
     private handlePreviewClick = (resourceId: string) => {
         let appBaseUrl = window.location.origin;
+        this.setState({clickedResourceId: resourceId});
         microsoftTeams.tasks.startTask({
             completionBotId: this.botId,
             title: this.localize('previewContentTaskModuleHeaderText'),
@@ -189,8 +193,28 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
             width: Resources.taskModuleWidth,
             url: `${appBaseUrl}/previewcontent?viewMode=1&resourceId=${resourceId}`,
             fallbackUrl: `${appBaseUrl}/previewcontent?viewMode=1&resourceId=${resourceId}`,
-        });
+        }, this.previewClickSubmitHandler);
     }
+
+    /**
+    * Preview resource content task module handler.
+    */
+    private previewClickSubmitHandler = async () => {
+        let resourceId = this.state.clickedResourceId;
+        const resourceDetailsResponse = await getResource(resourceId);
+        if (resourceDetailsResponse !== null && resourceDetailsResponse.data) {
+            let resourceDetail: IResourceDetail = resourceDetailsResponse.data
+            let allResources = this.state.allResources.map((resource: IResourceDetail) => ({ ...resource }));
+            let resourceIndex = allResources.findIndex((resource: IResourceDetail) => resource.id === resourceId);
+            let existingResourceDetail = allResources[resourceIndex];
+            if (existingResourceDetail.isLikedByUser !== resourceDetail.isLikedByUser) {
+                existingResourceDetail.isLikedByUser = resourceDetail.isLikedByUser;
+                resourceDetail.isLikedByUser ? existingResourceDetail.voteCount!++ : existingResourceDetail.voteCount!--;
+            };
+            allResources[resourceIndex] = existingResourceDetail;
+            this.setState({ allResources: allResources });
+        }
+    };
 
     /**
     * Validate whether user is part of a security group.
@@ -355,18 +379,24 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
         }, this.addToLearningModuleSubmitHandler);
     }
 
+
     /**
-    * Add to learning module task module submit handler.
-    * @param {string | any} err Task module submit handler error message.
-    * @param {string | any} result Task module submit handler result.
+    * handleAddToLearningModuleClick content task module handler.
+    * @param {Any} err learning module task module error
+    * @param {Any} module learning module response data
     */
-    private addToLearningModuleSubmitHandler = async (err: string | any, result: string | any) => {
-        if (result !== null) {
-            let success = result["isSuccess"];
-            if (success) {
-                this.showAlert(this.localize("resourceAddedToLearningModule"), NotificationType.Success)
-            } else {
-                this.showAlert(this.localize("postErrorMessage"), NotificationType.Failure)
+    private addToLearningModuleSubmitHandler = async (err: any, result: any) => {
+        if (err) {
+            return "";
+        }
+        if (result != null) {
+            if (result["isSuccess"]) {
+                this.showAlert(this.localize("resourceAddedToLearningModule"), NotificationType.Success);
+            } else if (result["isDuplicate"]) {
+                this.showAlert(this.localize("resourceAddedToLearningModuleDuplicate"), NotificationType.Failure);
+            }
+            else {
+                this.showAlert(this.localize("postErrorMessage"), NotificationType.Failure);
             }
         }
     };
@@ -423,7 +453,7 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
         
         if (tiles.length > 0) {
             cards.push(
-                <Grid columns={this.state.windowScreenWidth > Resources.maxWidthForMobileView ? Resources.threeColumnGrid : Resources.oneColumnGrid}
+                <Grid columns={this.state.windowWidth > Resources.maxWidthForMobileView ? Resources.threeColumnGrid : Resources.oneColumnGrid}
                     accessibility={gridBehavior}
                     className="tile-render"
                     content={tiles}>
@@ -447,6 +477,7 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
                                 isValidUser={(this.state.userRoleDetails.isAdmin || this.state.userRoleDetails.isTeacher)}
                                 handleCreatedByToggleButtonChange={this.handleCreatedByToggleButtonChange}
                                 handleSearchIconClick={this.handleSearchIconClick}
+                                windowWidth={this.state.windowWidth}
                             />
                             {
                                 this.state.showPostLoader ?
@@ -466,7 +497,7 @@ class YourLearningResourcePage extends React.Component<WithTranslation, IYourLea
                                                             <EyeIcon size="largest" />
                                                         </div>
                                                         <div className="no-data-preview">
-                                                            <Text content={this.localize("noDataPreviewNote")} />
+                                                            <Text content={this.localize("noDataFoundNote")} />
                                                         </div>
                                                     </div>
                                                     :

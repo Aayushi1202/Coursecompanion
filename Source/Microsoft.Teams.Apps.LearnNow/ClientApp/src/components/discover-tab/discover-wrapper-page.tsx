@@ -7,7 +7,7 @@ import * as microsoftTeams from "@microsoft/teams-js";
 import { Loader, Grid, gridBehavior } from '@fluentui/react-northstar'
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
-import { deleteResource, userDownVoteResource, userUpVoteResource, getResources } from '../../api/resource-api'
+import { deleteResource, userDownVoteResource, userUpVoteResource, getResources, getResource } from '../../api/resource-api'
 import { IResourceDetail, ISubject, IGrade, ICreatedBy, ITag, IFilterModel, IFilterRequestModel, NotificationType, IUserRole } from "../../model/type";
 import InfiniteScroll from 'react-infinite-scroller';
 import Tile from "../discover-tab/tile"
@@ -55,6 +55,7 @@ interface IDiscoverPageState {
     isGradeFilterCountValid: boolean;
     isSubjectFilterCountValid: boolean;
     isCreatedByFilterCountValid: boolean;
+    clickedResourceId: string;
 }
 
 /**
@@ -113,6 +114,7 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
             isGradeFilterCountValid: true,
             isSubjectFilterCountValid: true,
             isCreatedByFilterCountValid: true,
+            clickedResourceId: "",
         }
 
         this.history = props.history;
@@ -393,6 +395,7 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
     */
     private handlePreviewClick = (resourceId: string) => {
         let appBaseUrl = window.location.origin;
+        this.setState({clickedResourceId: resourceId});
         microsoftTeams.tasks.startTask({
             completionBotId: this.botId,
             title: this.localize('previewContentTaskModuleHeaderText'),
@@ -400,8 +403,28 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
             width: Resources.taskModuleWidth,
             url: `${appBaseUrl}/previewcontent?viewMode=1&resourceId=${resourceId}`,
             fallbackUrl: `${appBaseUrl}/previewcontent?viewMode=1&resourceId=${resourceId}`,
-        });
+        }, this.previewClickSubmitHandler);
     }
+
+    /**
+    * Preview resource content task module handler.
+    */
+    private previewClickSubmitHandler = async () => {
+        let resourceId = this.state.clickedResourceId;
+        const resourceDetailsResponse = await getResource(resourceId);
+        if (resourceDetailsResponse !== null && resourceDetailsResponse.data) {
+            let resourceDetail: IResourceDetail = resourceDetailsResponse.data
+            let allResources = this.state.allResources.map((resource: IResourceDetail) => ({ ...resource }));
+            let resourceIndex = allResources.findIndex((resource: IResourceDetail) => resource.id === resourceId);
+            let existingResourceDetail = allResources[resourceIndex];
+            if (existingResourceDetail.isLikedByUser !== resourceDetail.isLikedByUser) {
+                existingResourceDetail.isLikedByUser = resourceDetail.isLikedByUser;
+                resourceDetail.isLikedByUser ? existingResourceDetail.voteCount!++ : existingResourceDetail.voteCount!--;
+            };
+            allResources[resourceIndex] = existingResourceDetail;
+            this.setState({ allResources: allResources });
+        }
+    };
 
     /**
     * Navigate to add resource to learning module task module.
@@ -431,10 +454,12 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
             return "";
         }
         if (result != null) {
-            let success = result["isSuccess"];
-            if (success) {
+            if (result["isSuccess"]) {
                 this.showAlert(this.localize("resourceAddedToLearningModule"), NotificationType.Success);
-            } else {
+            } else if( result["isDuplicate"]){
+                this.showAlert(this.localize("resourceAddedToLearningModuleDuplicate"), NotificationType.Failure);
+            }
+             else {
                 this.showAlert(this.localize("postErrorMessage"), NotificationType.Failure);
             }
         }
@@ -535,7 +560,7 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
     private onGradeCheckboxStateChange = (selectedCheckboxes: Array<ICheckBoxItem>) => {
         this.userSetting.gradeIds = [];
         let selectedGrades: Array<ICheckBoxItem> = selectedCheckboxes.filter((checkboxItem: ICheckBoxItem) => {
-            return checkboxItem.isChecked === true;
+            return checkboxItem.isChecked;
         });
 
         this.userSetting.gradeIds = selectedGrades.map((gradeCheckboxItem: ICheckBoxItem) => gradeCheckboxItem.id);
@@ -549,7 +574,7 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
     private onSubjectCheckboxStateChange = (selectedCheckboxes: Array<ICheckBoxItem>) => {
         this.userSetting.subjectIds = [];
         let selectedSubjects: Array<ICheckBoxItem> = selectedCheckboxes.filter((checkboxItem: ICheckBoxItem) => {
-            return checkboxItem.isChecked === true;
+            return checkboxItem.isChecked;
         });
 
         this.userSetting.subjectIds = selectedSubjects.map((subjectCheckboxItem: ICheckBoxItem) => subjectCheckboxItem.id);
@@ -563,7 +588,7 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
     private onTagsCheckboxStateChange = (selectedCheckboxes: Array<ICheckBoxItem>) => {
         this.userSetting.tagIds = [];
         let selectedTags: Array<ICheckBoxItem> = selectedCheckboxes.filter((checkboxItem: ICheckBoxItem) => {
-            return checkboxItem.isChecked === true;
+            return checkboxItem.isChecked;
         });
 
         this.userSetting.tagIds = selectedTags.map((tagCheckboxItem: ICheckBoxItem) => tagCheckboxItem.id);
@@ -577,7 +602,7 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
     private onAddedByCheckboxStateChange = (selectedCheckboxes: Array<ICheckBoxItem>) => {
         this.userSetting.createdByObjectIds = [];
         let selectedCreatedBy: Array<ICheckBoxItem> = selectedCheckboxes.filter((checkboxItem: ICheckBoxItem) => {
-            return checkboxItem.isChecked === true;
+            return checkboxItem.isChecked;
         });
 
         this.userSetting.createdByObjectIds = selectedCreatedBy.map((createdByCheckboxItem: ICheckBoxItem) => createdByCheckboxItem.id);
@@ -761,21 +786,17 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
 
         // Cards component array to be rendered on grid.
         const cards = new Array<JSX.Element>();
-        let tiles = new Array<JSX.Element>();
-        let allResources = this.state.allResources.map((resource: IResourceDetail) => ({ ...resource }));
-        allResources.forEach((resource: IResourceDetail) => {
-            tiles.push(<Tile index={resource.id}
-                resourceDetails={resource}
-                handleEditClick={this.handleEditClick}
-                handlePreviewClick={this.handlePreviewClick}
-                handleDeleteClick={this.handleDeleteClick}
-                handleVoteClick={this.handleVoteClick}
-                currentUserId={this.userAADObjectId!}
-                userRole={this.state.userRole}
-                handleAddToLearningModuleClick={this.handleAddToLearningModuleClick}
-                handleAddToUserResourcesClick={this.handleAddToUserResourcesClick}
-            />);
-        });
+        const tiles = this.state.allResources.map((resource: IResourceDetail) => (<Tile index={resource.id}
+            resourceDetails={resource}
+            handleEditClick={this.handleEditClick}
+            handlePreviewClick={this.handlePreviewClick}
+            handleDeleteClick={this.handleDeleteClick}
+            handleVoteClick={this.handleVoteClick}
+            currentUserId={this.userAADObjectId!}
+            userRole={this.state.userRole}
+            handleAddToLearningModuleClick={this.handleAddToLearningModuleClick}
+            handleAddToUserResourcesClick={this.handleAddToUserResourcesClick}
+        />));
 
         if (tiles.length > 0) {
             cards.push(
@@ -835,8 +856,8 @@ class DiscoverPage extends React.Component<WithTranslation, IDiscoverPageState> 
                                 loader={<div className="loader"><Loader /></div>}>
 
                                 {
-                                    cards.length ?
-                                        cards : (this.state.hasMorePosts === true ?
+                                    tiles.length ?
+                                        cards : (this.state.hasMorePosts ?
                                             <></> : (this.state.isFilterApplied ? < FilterNoPostContentPage /> : <NoPostAddedPage handleAddNewResource={this.handleAddNewResourceClick} isValidUser={(this.state.userRole.isAdmin || this.state.userRole.isTeacher)} />))
                                 }
 

@@ -36,7 +36,7 @@ export enum ResourceType {
     "Excel" = 2,
     "Word" = 3,
     "PDF" = 4,
-    "ExternalLink" = 5
+    "Web link" = 5
 }
 
 export interface IGrade {
@@ -162,6 +162,7 @@ export interface IFilterModel {
     gradeIds: string[],
     tagIds: string[],
     createdByObjectIds: string[],
+    searchText?: string;
 }
 
 export interface IUserLearningFilterModel {

@@ -57,9 +57,9 @@ const LearningModuleTable: React.FunctionComponent<ILearningModuleTableProps> = 
                                     <Flex>
                                         <Text
                                             className="subject-name"
-                                            content={value.subject.subjectName + " | "}
+                                            content={value.subject.subjectName }
                                             weight="semibold"
-                                        />
+                                        /> |
                                         <Text
                                             className="grade-name"
                                             content={"" + value.grade.gradeName}
@@ -68,7 +68,7 @@ const LearningModuleTable: React.FunctionComponent<ILearningModuleTableProps> = 
                                 </div>
                             </Flex.Item>
                         </Flex>
-                        { props.screenWidth! >= Resources.maxWidthForMobileViewForResource ?
+                        { props.screenWidth! >= Resources.maxWidthForMobileView ?
 
                             <Flex>
                                 <Text

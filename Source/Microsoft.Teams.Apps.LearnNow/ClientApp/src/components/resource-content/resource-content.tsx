@@ -7,7 +7,7 @@ import { WithTranslation, withTranslation } from "react-i18next";
 import * as microsoftTeams from "@microsoft/teams-js";
 import { AxiosResponse } from "axios";
 import { isNullorWhiteSpace, handleError, getTagById, getFileName, getFileExtension } from "../../helpers/helper";
-import { Text, Flex, Input, Button, Dropdown, FlexItem, TextArea, Loader} from "@fluentui/react-northstar";
+import { Text, Flex, Input, Button, Dropdown, FlexItem, TextArea, Loader } from "@fluentui/react-northstar";
 import FileUploadDownload from "./../file-control/file-control";
 import { TFunction } from "i18next";
 import Tag from "../resource-content/tag";
@@ -52,7 +52,7 @@ interface IResourceContentState {
     resourceTag: IResourceTag[];
     tagValidation: ITagValidationParameters;
     fileName: string;
-    fileExtenstion: string
+    fileExtension: string
     showAttachment: boolean,
     loading: boolean,
     isSaveButtonLoading: boolean,
@@ -69,6 +69,7 @@ interface IResourceContentState {
     isUploadDisable: boolean,
     isLinkDisable: boolean,
     windowWidth: number,
+    tag: string | undefined,
 }
 
 /**
@@ -110,7 +111,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
             resourceTag: [],
             tagValidation: { isExisting: false, isTagsCountValid: true, },
             fileName: "",
-            fileExtenstion: "",
+            fileExtension: "",
             showAttachment: false,
             loading: true,
             isSaveButtonLoading: false,
@@ -122,7 +123,8 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
             isImagePage: false,
             isPreviewPage: false,
             isLinkDisable: false,
-            windowWidth: window.innerWidth
+            windowWidth: window.innerWidth,
+            tag: undefined
         }
 
         let search = props.history.location.search;
@@ -316,7 +318,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
             if (this.ValidateTag(resourceTag)) {
                 let resourceTagDetails = [...this.state.resourceTag];
                 resourceTagDetails.push(resourceTag);
-                this.setState({ tagValidation: { isExisting: false, isTagsCountValid: true, }, resourceTag: resourceTagDetails });
+                this.setState({ tagValidation: { isExisting: false, isTagsCountValid: true, }, resourceTag: resourceTagDetails, tag: "" });
             }
         }
     }
@@ -426,9 +428,9 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
     * Check if resource type is valid or not.
     * @param {resourceType} resourceType selected resource type.
     */
-    private ValidateResourceType = async (resourceType: ResourceType) => {
+    private validateResourceType = async (resourceType: ResourceType) => {
 
-        let fileExtension = this.state.fileExtenstion;
+        let fileExtension = this.state.fileExtension;
 
         if (fileExtension === "" && this.state.resourceDetail.linkUrl) {
             return resourceType === 5
@@ -437,24 +439,24 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
         switch (fileExtension.toLowerCase()) {
             case FileType.PPTX:
             case FileType.PPT: {
-                return resourceType === 1 
+                return resourceType === 1
             }
             case FileType.XLSX:
             case FileType.XLS: {
-                return resourceType === 2 
+                return resourceType === 2
             }
 
             case FileType.DOC:
             case FileType.DOCX: {
-                return resourceType === 3 
+                return resourceType === 3
             }
 
             case FileType.PDF: {
-                return resourceType === 4 
+                return resourceType === 4
             }
 
             default: {
-                return resourceType === 5 
+                return resourceType === 5
             }
         }
     }
@@ -542,7 +544,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
 
     /**
     * Returns text component containing error message for failed resource type field validation
-    * @param {Boolean} isTypeOfResourceValid Indicates whether tesource type is valid or not.
+    * @param {Boolean} isTypeOfResourceValid Indicates whether resource type is valid or not.
     */
     private getResourceTypeError = (isTypeOfResourceValid: boolean) => {
         if (!isTypeOfResourceValid) {
@@ -584,7 +586,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
         let resourceDetail = this.state.resourceDetail;
         var isTitleValid = await this.validateIfTitleExists(resourceDetail.title);
         let isTitlePresent = true;
-        var isTypeOfResourceValid = await this.ValidateResourceType(resourceDetail.resourceType);
+        var isTypeOfResourceValid = await this.validateResourceType(resourceDetail.resourceType);
         let isTypeOfResourcePresent = true;
         let isDescriptionValid = true;
         let isSubjectValid = true;
@@ -608,7 +610,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
         }
 
         // If file is uploaded.
-        if (resourceDetail.resourceType && !isNullorWhiteSpace(this.state.fileExtenstion) && !isTypeOfResourceValid) {
+        if (resourceDetail.resourceType && !isNullorWhiteSpace(this.state.fileExtension) && !isTypeOfResourceValid) {
             isTypeOfResourceValid = false;
         }
 
@@ -655,14 +657,14 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
     private getFileName = (filePath: string) => {
         let fileName = getFileName(filePath);
         let fileExtension = getFileExtension(filePath);
-        this.setState({ fileName: fileName, showAttachment: true, fileExtenstion: fileExtension });
+        this.setState({ fileName: fileName, showAttachment: true, fileExtension: fileExtension });
     }
 
     /**
     * Handle remove attachment click on close icon.
     */
     private removeFileAttachment = async () => {
-        this.setState({ showAttachment: false, fileName: "", fileExtenstion: "" });
+        this.setState({ showAttachment: false, fileName: "", fileExtension: "" });
     }
 
     /**
@@ -674,7 +676,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
     private setUploadedFileInformation = (fileName: string, fileExtension: string, fileToUpload: FormData) => {
         this.setState({
             fileToUpload: fileToUpload, showAttachment: true, isFileFormatValid: true,
-            isFileValid: true, fileName: fileName, fileExtenstion: fileExtension
+            isFileValid: true, fileName: fileName, fileExtension: fileExtension
         });
     }
 
@@ -731,7 +733,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
                 };
                 resourceTag.tag = tag
             });
-            saveResourceResponse.resourceTag = resourceTags;           
+            saveResourceResponse.resourceTag = resourceTags;
         }
         let isSuccess = saveResourceResponse ? Resources.successFlag : Resources.errorFlag;
         let details: any = { isSuccess: isSuccess, title: this.state.resourceDetail.title, saveResponse: saveResourceResponse }
@@ -815,7 +817,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
     * Renders the component.
     */
     private renderResourceContent() {
-        let resourceTypeDropDownItems = Object.keys(ResourceType).filter(k =>  isNaN(Number(k))); //get resource types named values from numeric enum
+        let resourceTypeDropDownItems = Object.keys(ResourceType).filter(k => isNaN(Number(k))); //get resource types named values from numeric enum
         return (
             <div>
                 {this.state.isContentPage &&
@@ -957,7 +959,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
                                             </div>
                                         </Flex.Item>
                                     </Flex>
-                                    <Flex>
+                                    <Flex className="tag-padding">
                                         <Text size="small" content={this.localize('tagsText')} />
                                         <Flex.Item push>
                                             {this.getTagError()}
@@ -972,6 +974,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
                                         fluid
                                         onChange={this.handleTagChange}
                                         className="tag-dropdown-input"
+                                        searchQuery={this.state.tag}
                                     />
 
                                     <div className="tags-wrapper">

@@ -22,6 +22,11 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Models
         public Guid LearningModuleId { get; set; }
 
         /// <summary>
+        /// Gets or sets resource module mapping created on date.
+        /// </summary>
+        public DateTimeOffset CreatedOn { get; set; }
+
+        /// <summary>
         /// Gets or sets learning module entity.
         /// </summary>
         public virtual LearningModule LearningModule { get; set; }

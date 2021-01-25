@@ -1,6 +1,7 @@
 ﻿// <copyright file="learning-module-tile.tsx" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
+
 import { Flex, Text, Dialog } from '@fluentui/react-northstar'
 import * as React from 'react';
 import { Button, Avatar, Popup, Loader } from '@fluentui/react-northstar'
@@ -48,10 +49,10 @@ class LearningModuleTile extends React.Component<ILearningModuleTileProps, ILear
     /**
     * Method to handle popup menu item click.
     * @param {String} item Menu item name clicked by user.
-    * @param {String} id Identifier of menu item clicked by user.
     */
-    private onPopUpItemClick = (item: string, id: string) => {
+    private onPopUpItemClick = (item: string) => {
         this.setState({ isPopUpOpen: false });
+        let id = this.props.learningModuleDetails.id;
         if (item === this.localize('editResourceText')) {
             this.props.handleEditClick(id);
         }
@@ -76,7 +77,10 @@ class LearningModuleTile extends React.Component<ILearningModuleTileProps, ILear
         this.setState({ showModuleVoteLoader: false });
     }
 
-    onOpenChange = (open: boolean) => {
+    /**
+    * Method gets called when popup open changes
+    */
+    private onOpenChange = (open: boolean) => {
         this.setState({ isPopUpOpen: open });
     }
 
@@ -84,7 +88,7 @@ class LearningModuleTile extends React.Component<ILearningModuleTileProps, ILear
     * Render tile details for learning module.
     */
     private renderTileContent = () => {
-        let learningModuleDetail = this.props.learningModuleDetails;        
+        let learningModuleDetail = this.props.learningModuleDetails;
         return (
             <div id={this.props.index.toString()} className="card-bg">
                 <div onClick={() => this.props.handlePreviewClick(learningModuleDetail.id)} className="cursor-pointer">
@@ -95,26 +99,26 @@ class LearningModuleTile extends React.Component<ILearningModuleTileProps, ILear
                         <Flex gap="gap.smaller" column vAlign="start">
                             <Flex column className="tab-card-header">
                                 <Flex>
-                                    <Text content={learningModuleDetail.title} weight="bold" className="card-title" />
+                                    <Text content={learningModuleDetail.title} weight="bold" className="card-title-lm" title={learningModuleDetail.title} />
                                 </Flex>
                                 <Flex>
-                                    <Text content={learningModuleDetail.subject?.subjectName.toUpperCase()} className="card-subtitle-subject" />|
-                                    <Text content={learningModuleDetail.grade?.gradeName.toUpperCase()} className="card-subtitle-grade" />
+                                    <Text content={learningModuleDetail.subject?.subjectName.toUpperCase()} className="card-subtitle-subject tile-text-overflow" title={learningModuleDetail.subject?.subjectName.toUpperCase()} />|
+                                    <Text content={learningModuleDetail.grade?.gradeName.toUpperCase()} className="card-subtitle-grade tile-text-overflow" title={learningModuleDetail.grade?.gradeName.toUpperCase()} />
                                     <Flex.Item push>
                                         <Flex className="card-pill">
                                             <Text content={this.localize("moduleLabel")} weight="bold" className="card-subtitle-module-bold" />
 
-                                            {learningModuleDetail?.resourceCount! <= 1 ?  
+                                            {learningModuleDetail?.resourceCount! <= 1 ?
                                                 <Text content={this.localize("learningModuleItemText", { numberOfResources: learningModuleDetail?.resourceCount })} className="card-subtitle-module-light" />
                                                 :
                                                 <Text content={this.localize("learningModuleItemsText", { numberOfResources: learningModuleDetail?.resourceCount })} className="card-subtitle-module-light" />
-                                                }
-                                            </Flex>
-                                        </Flex.Item>
+                                            }
+                                        </Flex>
+                                    </Flex.Item>
                                 </Flex>
                             </Flex>
                             <Flex className="content-flex" gap="gap.small">
-                                <Text size="small" className="content-text" title={learningModuleDetail.description} content={learningModuleDetail.description} />
+                                <Text size="small" className="content-text-lm card-description-lm" title={learningModuleDetail.description} content={learningModuleDetail.description} />
                             </Flex>
                         </Flex>
                     </div>
@@ -159,15 +163,16 @@ class LearningModuleTile extends React.Component<ILearningModuleTileProps, ILear
                                 onOpenChange={(e, { open }: any) => this.onOpenChange(open)}
                                 content={
                                     <>
-                                        {((this.props.userRole.isTeacher && this.props.currentUserId === learningModuleDetail?.createdBy) || this.props.userRole.isAdmin) && <p onClick={() => this.onPopUpItemClick(this.localize('editResourceText'), learningModuleDetail.id)} className="cursor-pointer"><EditIcon size="small" outline className="popup-list-icon" />{this.localize('editResourceText')}</p>}
-                                        {!this.props.isPrivateListTab && <p onClick={() => this.onPopUpItemClick(this.localize('addToUserList'), learningModuleDetail.id)} className="cursor-pointer"><BookmarkIcon outline size="small" className="popup-list-icon" />{this.localize('addToUserList')}</p>}
-                                        {this.props.isPrivateListTab && <p onClick={() => this.onPopUpItemClick(this.localize('removeFromUserList'), learningModuleDetail.id)} className="cursor-pointer"><TrashCanIcon outline size="small" className="popup-list-icon" />{this.localize('removeFromUserList')}</p>}
+                                        {!this.props.isPrivateListTab && <p onClick={() => this.onPopUpItemClick(this.localize('addToUserList'))} className="cursor-pointer"><BookmarkIcon outline size="small" className="popup-list-icon" />{this.localize('addToUserList')}</p>}
+                                        {this.props.isPrivateListTab && <p onClick={() => this.onPopUpItemClick(this.localize('removeFromUserList'))} className="cursor-pointer"><TrashCanIcon outline size="small" className="popup-list-icon" />{this.localize('removeFromUserList')}</p>}
+                                        {((this.props.userRole.isTeacher && this.props.currentUserId === learningModuleDetail?.createdBy) || this.props.userRole.isAdmin) && <p onClick={() => this.onPopUpItemClick(this.localize('editResourceText'))} className="cursor-pointer"><EditIcon size="small" outline className="popup-list-icon" />{this.localize('editResourceText')}</p>}
                                         <Dialog
+                                            className="delete-dialog-mobile"
                                             cancelButton={this.localize('deleteResourceCancelButtonText')}
                                             confirmButton={this.localize('deleteResourceConfirmButtonText')}
-                                            header={this.localize('deleteResourceHeaderText')}
+                                            header={this.localize('deleteModuleHeaderText')}
                                             content={this.localize('deleteResourceContentText')}
-                                            onConfirm={() => this.onPopUpItemClick(this.localize('deleteResourceText'), learningModuleDetail.id)}
+                                            onConfirm={() => this.onPopUpItemClick(this.localize('deleteResourceText'))}
                                             trigger={((this.props.userRole.isTeacher && this.props.currentUserId === learningModuleDetail?.createdBy) || this.props.userRole.isAdmin) ? <p className="cursor-pointer"><TrashCanIcon outline size="small" className="popup-list-icon" />{this.localize('deleteResourceText')}</p> : <></>}
                                         />
                                     </>

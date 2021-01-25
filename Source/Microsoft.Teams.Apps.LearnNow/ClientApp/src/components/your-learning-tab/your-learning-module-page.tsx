@@ -7,8 +7,8 @@ import * as microsoftTeams from "@microsoft/teams-js";
 import { Loader, EyeIcon, Text, Grid, gridBehavior } from '@fluentui/react-northstar'
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from 'i18next';
-import { ILearningModuleDetail, NotificationType, IUserRole } from "../../model/type";
-import { deleteLearningModule, userDownVoteLearningModule, userUpVoteLearningModule } from '../../api/learning-module-api';
+import { ILearningModuleDetail, NotificationType, IUserRole, IModuleResourceViewModel } from "../../model/type";
+import { deleteLearningModule, getLearningModule, userDownVoteLearningModule, userUpVoteLearningModule } from '../../api/learning-module-api';
 import InfiniteScroll from 'react-infinite-scroller';
 import LearningModuleTile from "../learning-module-tab/learning-module-tile"
 import NotificationMessage from '../notification-message/notification-message';
@@ -22,7 +22,7 @@ import "../../styles/site.css";
 import "../../styles/tile.css";
 
 interface IYourLearningModulePageState {
-    windowScreenWidth: number;
+    windowWidth: number;
     searchText: string;
     alertMessage: string;
     alertType: NotificationType;
@@ -38,6 +38,7 @@ interface IYourLearningModulePageState {
     isCreatedByFilter: boolean;
     showPostLoader: boolean;
     userRole: IUserRole;
+    clickedModuleId: string,
 }
 
 /**
@@ -54,7 +55,7 @@ class YourLearningModulePage extends React.Component<WithTranslation, IYourLearn
         super(props);
         this.localize = this.props.t;
         this.state = {
-            windowScreenWidth: window.innerWidth,
+            windowWidth: window.innerWidth,
             searchText: "",
             alertMessage: "",
             alertType: 0,
@@ -73,6 +74,7 @@ class YourLearningModulePage extends React.Component<WithTranslation, IYourLearn
                 isAdmin: false,
                 isTeacher: false
             },
+            clickedModuleId: "",
         }
     }
 
@@ -115,8 +117,8 @@ class YourLearningModulePage extends React.Component<WithTranslation, IYourLearn
     * Get screen width real time
     */
     private update = () => {
-        if (window.innerWidth !== this.state.windowScreenWidth) {
-            this.setState({ windowScreenWidth: window.innerWidth });
+        if (window.innerWidth !== this.state.windowWidth) {
+            this.setState({ windowWidth: window.innerWidth });
         }
     };
 
@@ -181,6 +183,7 @@ class YourLearningModulePage extends React.Component<WithTranslation, IYourLearn
     */
     private handlePreviewClick = (learningModuleId: string) => {
         let appBaseUrl = window.location.origin;
+        this.setState({clickedModuleId : learningModuleId});
         microsoftTeams.tasks.startTask({
             completionBotId: this.botId,
             title: this.localize('previewContentTaskModuleHeaderText'),
@@ -188,8 +191,29 @@ class YourLearningModulePage extends React.Component<WithTranslation, IYourLearn
             width: LearningModules.taskModuleWidth,
             url: `${appBaseUrl}/learningmodulepreview?viewMode=1&learningModuleId=${learningModuleId}`,
             fallbackUrl: `${appBaseUrl}/learningmodulepreview?viewMode=1&learningModuleId=${learningModuleId}`,
-        });
+        }, this.previewClickSubmitHandler);
     }
+
+    /**
+    * Preview module content task module handler.
+    */
+    private previewClickSubmitHandler = async () => {
+        let moduleId = this.state.clickedModuleId;
+        const moduleDetailsResponse = await getLearningModule(moduleId);
+        if (moduleDetailsResponse !== null && moduleDetailsResponse.data) {
+            let moduleDetailsResponseData: IModuleResourceViewModel = moduleDetailsResponse.data;
+            let moduleDetail = moduleDetailsResponseData.learningModule;
+            let allLearningModules = this.state.allLearningModules.map((module: ILearningModuleDetail) => ({ ...module }));
+            let moduleIndex = allLearningModules.findIndex((module: ILearningModuleDetail) => module.id === moduleId);
+            let existingModuleDetail = allLearningModules[moduleIndex];
+            if (existingModuleDetail.isLikedByUser !== moduleDetail.isLikedByUser) {
+                existingModuleDetail.isLikedByUser = moduleDetail.isLikedByUser;
+                moduleDetail.isLikedByUser ? existingModuleDetail.voteCount!++ : existingModuleDetail.voteCount!--;
+            };
+            allLearningModules[moduleIndex] = existingModuleDetail;
+            this.setState({ allLearningModules: allLearningModules });
+        }
+    };
 
     /**
     * Validate whether user is part of a security group.
@@ -389,7 +413,7 @@ class YourLearningModulePage extends React.Component<WithTranslation, IYourLearn
         });
         if (tiles.length > 0) {
         cards.push(
-            <Grid columns={this.state.windowScreenWidth > Resources.maxWidthForMobileView ? Resources.threeColumnGrid : Resources.oneColumnGrid}
+            <Grid columns={this.state.windowWidth > Resources.maxWidthForMobileView ? Resources.threeColumnGrid : Resources.oneColumnGrid}
                 accessibility={gridBehavior}
                 className="tile-render"
                 content={tiles}></Grid>);
@@ -412,6 +436,7 @@ class YourLearningModulePage extends React.Component<WithTranslation, IYourLearn
                                 isValidUser={(this.state.userRole.isAdmin || this.state.userRole.isTeacher)}
                                 handleCreatedByToggleButtonChange={this.handleCreatedByToggleButtonChange}
                                 handleSearchIconClick={this.handleSearchIconClick}
+                                windowWidth={this.state.windowWidth}
                             />
                             {
 
@@ -432,7 +457,7 @@ class YourLearningModulePage extends React.Component<WithTranslation, IYourLearn
                                                             <EyeIcon size="largest" />
                                                         </div>
                                                         <div className="no-data-preview">
-                                                            <Text content={this.localize("noDataPreviewNote")} />
+                                                            <Text content={this.localize("noDataFoundNote")} />
                                                         </div>
                                                     </div>
                                                     :

@@ -3,7 +3,7 @@
 // </copyright>
 
 import * as React from "react";
-import { Flex, Input, Button, Text } from "@fluentui/react-northstar";
+import { Flex, Input, Button, Text, AddIcon } from "@fluentui/react-northstar";
 import { SearchIcon } from "@fluentui/react-icons-northstar";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { useTranslation } from 'react-i18next'
@@ -58,7 +58,9 @@ const CommandBar: React.FunctionComponent<ICommandBarProps> = props => {
                 </div>
                 {
                     (props.userRole.isTeacher || props.userRole.isAdmin)
-                        ? <Button content={localize("addNewText")} primary onClick={props.handleAddClick} />
+                        ? windowWidth > Resources.maxWidthForMobileView ?
+                            <Button content={localize("addNewText")} primary onClick={props.handleAddClick} /> 
+                            : <><AddIcon outline onClick={props.handleAddClick}/></>
                         : <></>
                 }
             </Flex>
