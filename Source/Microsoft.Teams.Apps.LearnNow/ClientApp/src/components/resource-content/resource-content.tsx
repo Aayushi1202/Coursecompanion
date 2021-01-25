@@ -10,12 +10,11 @@ import { isNullorWhiteSpace, handleError, getTagById, getFileName, getFileExtens
 import { Text, Flex, Input, Button, Dropdown, FlexItem, TextArea, Loader } from "@fluentui/react-northstar";
 import FileUploadDownload from "./../file-control/file-control";
 import { TFunction } from "i18next";
-import Tag from "../resource-content/tag";
 import Constants from "../../constants/resources";
 import ShowAttachment from "../resource-content/show-attachment"
 import { createResource, getResource, updateResource, validateIfResourceTitleExists } from '../../api/resource-api'
 import Resources from "../../constants/resources";
-import { IResourceDetail, RequestMode, IGrade, ISubject, ITag, IResourceTag, ResourceType } from "../../model/type";
+import { IResourceDetail, RequestMode, IGrade, ISubject, ITag, IResourceTag, ResourceType, IDropDownItem } from "../../model/type";
 import { getAllSubjects } from "../../api/subject-api";
 import { getAllTags } from "../../api/tag-api";
 import { uploadFile } from "../../api/file-upload-download-api";
@@ -27,7 +26,6 @@ import { FileType } from "../file-control/file-types";
 import "../../styles/resource-content.css";
 
 export interface ITagValidationParameters {
-    isExisting: boolean;
     isTagsCountValid: boolean;
 }
 
@@ -70,6 +68,8 @@ interface IResourceContentState {
     isLinkDisable: boolean,
     windowWidth: number,
     tag: string | undefined,
+    selectedTags: IDropDownItem[],
+    allTagsDropDownItems: IDropDownItem[]
 }
 
 /**
@@ -109,7 +109,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
             isFileValid: true,
             isFileFormatValid: true,
             resourceTag: [],
-            tagValidation: { isExisting: false, isTagsCountValid: true, },
+            tagValidation: { isTagsCountValid: true },
             fileName: "",
             fileExtension: "",
             showAttachment: false,
@@ -124,7 +124,9 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
             isPreviewPage: false,
             isLinkDisable: false,
             windowWidth: window.innerWidth,
-            tag: undefined
+            tag: undefined,
+            selectedTags: [],
+            allTagsDropDownItems: []
         }
 
         let search = props.history.location.search;
@@ -206,6 +208,13 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
             this.setState({
                 resourceDetail: resourceDetails,
                 resourceTag: resourceDetails.resourceTag,
+                selectedTags: resourceDetails.resourceTag.map((tag: IResourceTag) => {
+                    let dropDownTag: IDropDownItem = {
+                        key: tag.tagId,
+                        header: tag.tag.tagName
+                    }
+                    return dropDownTag
+                }),
                 grade: grade,
                 subject: subject,
                 isImageNextBtnDisabled: isImageButtonDisable,
@@ -243,7 +252,8 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
     private getTags = async () => {
         const tagsResponse = await getAllTags(this.handleAuthenticationFailure);
         if (tagsResponse.status === 200 && tagsResponse.data) {
-            this.setState({ allTags: tagsResponse.data });
+            let allTags: IDropDownItem[] = tagsResponse.data.map((tag: ITag) => { return { key: tag.id, header: tag.tagName } });
+            this.setState({ allTags: tagsResponse.data, allTagsDropDownItems: allTags });
         }
     }
 
@@ -311,15 +321,23 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
     * @param {string} dropdownProps props received on dropdown value click
     */
     private handleTagChange = (event: any, dropdownProps?: any) => {
+        debugger;
         let tag = dropdownProps.value;
+        if (tag.length > Resources.tagsMaxCount) {
+            this.setState({ tagValidation: { isTagsCountValid: false } })
+            return;
+        }
         if (tag) {
-            let resourceTag = {} as IResourceTag;
-            resourceTag.tagId = tag.key;
-            if (this.ValidateTag(resourceTag)) {
-                let resourceTagDetails = [...this.state.resourceTag];
-                resourceTagDetails.push(resourceTag);
-                this.setState({ tagValidation: { isExisting: false, isTagsCountValid: true, }, resourceTag: resourceTagDetails, tag: "" });
-            }
+            this.setState({ selectedTags: tag });
+
+            let resourceTags = tag.map((dropDownItem: IDropDownItem) => {
+                let resourceTag = {} as IResourceTag;
+                resourceTag.tagId = dropDownItem.key;
+                return resourceTag
+            });
+
+            this.setState({ tagValidation: { isTagsCountValid: true, }, resourceTag: resourceTags });
+
         }
     }
 
@@ -401,30 +419,6 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
     }
 
     /**
-    * Check if tag is valid
-    * @param {resourceTag} resourceTag selected tag.
-    */
-    private ValidateTag = (resourceTag: IResourceTag) => {
-        let validationParams: ITagValidationParameters = { isExisting: false, isTagsCountValid: false };
-
-        if (this.state.resourceTag ? this.state.resourceTag.length < Constants.tagsMaxCount : false) {
-            validationParams.isTagsCountValid = true;
-        }
-
-        let tags = this.state.resourceTag;
-        let isTagExist = tags ? tags.find(x => x.tagId === resourceTag.tagId) : false;
-        if (isTagExist) {
-            validationParams.isExisting = true;
-        }
-        this.setState({ tagValidation: validationParams });
-
-        if (!validationParams.isExisting && validationParams.isTagsCountValid) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
     * Check if resource type is valid or not.
     * @param {resourceType} resourceType selected resource type.
     */
@@ -486,16 +480,6 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
             }
             return false;
         }
-    }
-
-    /**
-    * Sets state of tagsList by removing tag using its index.
-    * @param {Number} Index of tag to be deleted.
-    */
-    private onTagRemoveClick = (index: number) => {
-        let resourceTag = [...this.state.resourceTag];
-        resourceTag.splice(index, 1);
-        this.setState({ resourceTag: resourceTag, tagValidation: { isExisting: false, isTagsCountValid: true } });
     }
 
     /**
@@ -573,9 +557,6 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
             return (<Text content={this.localize("tagsCountError")} error size="small" />);
         }
 
-        else if (this.state.tagValidation.isExisting) {
-            return (<Text content={this.localize("sameTagExistsError")} error size="small" />);
-        }
         return (<></>);
     }
 
@@ -725,17 +706,18 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
                 subjectName: this.state.subject
             }
 
-            let resourceTags = [...this.state.resourceTag];
-
-            resourceTags.forEach((resourceTag) => {
-                let tag: ITag = {
-                    tagName: getTagById(resourceTag.tagId, this.state.allTags)
-                };
-                resourceTag.tag = tag
+            let tags = this.state.selectedTags.map((dropDownItem: IDropDownItem) => {
+                let tags: ITag = { tagName: dropDownItem.header, id: dropDownItem.key }
+                let resourceTag: IResourceTag = {
+                    tag: tags,
+                    tagId: dropDownItem.key
+                }
+                return resourceTag
             });
-            saveResourceResponse.resourceTag = resourceTags;
+
+            saveResourceResponse.resourceTag = tags;
         }
-        let isSuccess = saveResourceResponse ? Resources.successFlag : Resources.errorFlag;
+        let isSuccess = saveResourceResponse ? Resources.successFlag : Resources.errorFlag;       
         let details: any = { isSuccess: isSuccess, title: this.state.resourceDetail.title, saveResponse: saveResourceResponse }
         microsoftTeams.tasks.submitTask(details);
     }
@@ -765,7 +747,7 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
     * Handle back button click on image selection page .
     */
     private handleImageBackButtonClick = async () => {
-        this.setState({ isContentPage: true, isImagePage: false, isPreviewPage: false, tagValidation: { isExisting: false, isTagsCountValid: true } });
+        this.setState({ isContentPage: true, isImagePage: false, isPreviewPage: false, tagValidation: { isTagsCountValid: true } });
     }
 
     /**
@@ -794,10 +776,12 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
 
         let response: AxiosResponse<IResourceDetail>;
         if (this.state.isEditMode) {
+
             // Update resource details in storage.   
             response = await updateResource(resource, resource.id);
         }
         else {
+
             // Store new resource details in storage.            
             response = await createResource(resource);
         }
@@ -966,31 +950,17 @@ class ResourceContent extends React.Component<WithTranslation, IResourceContentS
                                         </Flex.Item>
                                     </Flex>
                                     <Dropdown
+                                        multiple
                                         search
-                                        items={this.state.allTags.map((tag: ITag) => { return { key: tag.id, header: tag.tagName } })}
+                                        items={this.state.allTagsDropDownItems}
                                         placeholder={this.localize('tagPlaceholderText')}
                                         noResultsMessage={this.localize("noTagFoundError")}
                                         toggleIndicator={{ styles: { display: 'none' } }}
                                         fluid
-                                        onChange={this.handleTagChange}
+                                        onChange={(e, selectedOption) => { this.handleTagChange(e, selectedOption) }}
                                         className="tag-dropdown-input"
-                                        searchQuery={this.state.tag}
+                                        value={this.state.selectedTags}
                                     />
-
-                                    <div className="tags-wrapper">
-                                        <Flex gap="gap.smaller" vAlign="center">
-                                            <Flex>
-                                                {
-                                                    this.state.resourceTag.map((value: IResourceTag, index) => {
-                                                        const tagName = this.getTagById(value.tagId)
-                                                        if (value && tagName) {
-                                                            return <Tag key={index} index={index} tagContent={tagName} showRemoveIcon={true} onRemoveClick={this.onTagRemoveClick} />
-                                                        }
-                                                    })
-                                                }
-                                            </Flex>
-                                        </Flex>
-                                    </div>
                                 </div>
                             </div>
                         </Flex>

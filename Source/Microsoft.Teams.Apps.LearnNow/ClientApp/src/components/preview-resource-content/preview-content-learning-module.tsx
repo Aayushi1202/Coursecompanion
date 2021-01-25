@@ -6,7 +6,8 @@ import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
 import * as React from "react";
 import { Flex, Text, Button, ChevronStartIcon, Image } from "@fluentui/react-northstar";
-import { ILearningModuleDetail } from "../../model/type";
+import { ILearningModuleDetail, IDropDownItem } from "../../model/type";
+import Tag from "../resource-content/tag";
 
 import "../../styles/resource-content.css";
 
@@ -16,6 +17,7 @@ interface IPreviewContentState {
 }
 
 interface IPreviewContentProps extends WithTranslation {
+    selectedTags?: IDropDownItem[],
     resourceDetail: ILearningModuleDetail,
     showImage: boolean,
     isViewOnly: boolean,
@@ -67,6 +69,18 @@ class PreviewContent extends React.Component<IPreviewContentProps, IPreviewConte
                         </div>
                         <div className="preview-input-padding">
                             <Text size="small" content={this.props.resourceDetail.description} />
+                        </div>
+                        <div className="preview-input-padding">
+                            {
+                                this.props.selectedTags ?
+                                    this.props.selectedTags.map((value: IDropDownItem, index) => {
+                                        if (value) {
+                                            return <Tag key={index} index={index} tagContent={value.header} showRemoveIcon={false} />
+                                        }
+                                    })
+                                    :
+                                    <></>
+                            }
                         </div>
                     </div>
                 </div>

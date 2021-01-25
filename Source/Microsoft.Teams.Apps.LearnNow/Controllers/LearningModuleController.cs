@@ -249,15 +249,15 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 // Delete existing resource tag from storage.
                 this.unitOfWork.LearningModuleTagRepository.DeleteLearningModuleTag(existingLearningModuleDetails.LearningModuleTag);
 
-                // Delete resource module mapping from storage.
-                var existingResourceModuleMappings = await this.unitOfWork.ResourceModuleRepository.FindAsync(module => module.LearningModuleId == existingLearningModuleDetails.Id);
-                if (existingResourceModuleMappings.Any() && moduleResourceDetails.Resources.Count() < existingResourceModuleMappings.Count())
+                // Delete existing resource module mapping from storage.
+                var existingResourceModuleMapping = await this.unitOfWork.ResourceModuleRepository.FindAsync(module => module.LearningModuleId == existingLearningModuleDetails.Id);
+                if (existingResourceModuleMapping.Any() && moduleResourceDetails.Resources.Count() < existingResourceModuleMapping.Count())
                 {
-                    var resourceModuleMappingsToRetain = moduleResourceDetails.Resources;
-                    foreach (var resourceModuleMapping in existingResourceModuleMappings)
+                    var newMapping = moduleResourceDetails.Resources;
+                    foreach (var resourceModuleMapping in existingResourceModuleMapping)
                     {
-                        var resourceMapping = resourceModuleMappingsToRetain.FirstOrDefault(k => k.Id == resourceModuleMapping.ResourceId);
-                        if (resourceMapping == null)
+                        var resource = newMapping.FirstOrDefault(k => k.Id == resourceModuleMapping.ResourceId);
+                        if (resource == null)
                         {
                             this.unitOfWork.ResourceModuleRepository.Delete(resourceModuleMapping);
                         }

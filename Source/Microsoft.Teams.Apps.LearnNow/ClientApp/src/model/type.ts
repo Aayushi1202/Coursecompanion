@@ -184,3 +184,8 @@ export interface IUserRole {
     isAdmin: boolean,
     isTeacher: boolean
 }
+
+export interface IDropDownItem {
+    key: string,
+    header: string,
+}

@@ -7,7 +7,7 @@ import { Button, Flex, Text, Loader, ChevronStartIcon } from "@fluentui/react-no
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
 import LearningModuleTablePreview from "../learning-module-tab/learning-module-content-preview-resources";
-import { ILearningModuleDetail, ILearningModuleTag } from '../../model/type';
+import { ILearningModuleDetail, IDropDownItem } from '../../model/type';
 import Tag from "../resource-content/tag";
 
 import "../../styles/resource-content.css";
@@ -25,9 +25,9 @@ interface ILearningModuleEditPreviewItemsState {
 interface ILearningModuleEditPreviewItemsProps extends WithTranslation {
     handleShareButtonClick: (event: any) => void
     handlePreviewBackButtonClick: (event: any) => void,
-    learningModuleDetails: ILearningModuleDetail;
+    learningModuleDetails: ILearningModuleDetail ;
     responsesData: any[]
-    learningModuleTags: ILearningModuleTag[]
+    learningModuleTags: IDropDownItem[]
     getTagById: (tagId: string) => string,
 }
 
@@ -128,9 +128,9 @@ class LearningModuleEditPreviewItems extends React.Component<ILearningModuleEdit
                                     <div className="preview-input-padding">
                                         {
                                             this.props.learningModuleTags ?
-                                                this.props.learningModuleTags.map((value: ILearningModuleTag, index) => {
+                                                this.props.learningModuleTags.map((value: IDropDownItem, index) => {
                                                     if (value) {
-                                                        return <Tag key={index} index={index} tagContent={this.props.getTagById(value.tagId)} showRemoveIcon={false} />
+                                                        return <Tag key={index} index={index} tagContent={value.header} showRemoveIcon={false} />
                                                     }
                                                 })
                                                 :

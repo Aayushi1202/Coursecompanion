@@ -18,6 +18,7 @@
 .create-content-main {
     max-height: 42.5rem !important;
     overflow-y: scroll;
+    width: 57rem;
 }
 
 .preview-container-tab {
@@ -247,7 +248,7 @@
     }
 
     .create-content-main {
-        max-height: 83.5vh !important;
+        max-height: 81.5vh !important;
         overflow-y: scroll;
     }
 
@@ -262,10 +263,7 @@
 }
 
 @media (min-height: 600px) {
-    .create-sub-div-resource {
-        padding-right: 2.2rem !important;
-    }
-
+   
     .input-tags-module {
         padding-right: 0rem;
     }
@@ -361,10 +359,6 @@
     max-height: 15rem !important;
 }
 
-.tag-dropdown-input {
-    width: 54rem !important;
-}
-
 .add-lm-tab-footer-preview {
     position: absolute;
     width: 91vw;
@@ -383,8 +377,3 @@
     padding-bottom:0.5rem;
 }
 
-@media (max-width: 550px) {
-    .tag-dropdown-input {
-        width: 30rem !important;
-    }
-}

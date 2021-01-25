@@ -8,10 +8,9 @@ import * as microsoftTeams from "@microsoft/teams-js";
 import { AxiosResponse } from "axios";
 import { isNullorWhiteSpace, handleError, getTagById } from "../../helpers/helper";
 import { Text, Flex, Input, Button, TextArea, Loader, ChevronStartIcon, InfoIcon, Dropdown } from "@fluentui/react-northstar";
-import Tag from "../resource-content/tag";
 import { TFunction } from "i18next";
 import Constants from "../../constants/resources";
-import { ILearningModuleDetail, IGrade, ISubject, RequestMode, IResourceDetail, IModuleResourceViewModel, ILearningModuleTag, ITag } from "../../model/type";
+import { ILearningModuleDetail, IGrade, ISubject, RequestMode, IResourceDetail, IModuleResourceViewModel, ILearningModuleTag, ITag, IDropDownItem } from "../../model/type";
 import { createLearningModule, getLearningModule, updateLearningModule, validateIfLearningModuleTitleExists } from '../../api/learning-module-api'
 import { getAllSubjects } from "../../api/subject-api";
 import { getAllGrades } from "../../api/grade-api";
@@ -26,7 +25,6 @@ import Resources from "../../constants/resources";
 import "../../styles/resource-content.css";
 
 export interface ITagValidationParameters {
-    isExisting: boolean;
     isTagsCountValid: boolean;
 }
 
@@ -59,6 +57,8 @@ interface ILearningModuleState {
     learningModuleTag: ILearningModuleTag[],
     windowWidth: number,
     tag: string,
+    selectedTags: IDropDownItem[],
+    allTagsDropDownItems: IDropDownItem[]
 }
 
 /**
@@ -104,9 +104,11 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
             filterItemEdit: [],
             isGradeSubjectDisable: false,
             learningModuleTag: [],
-            tagValidation: { isExisting: false, isTagsCountValid: true, },
+            tagValidation: { isTagsCountValid: true, },
             windowWidth: window.innerWidth,
             tag: "",
+            allTagsDropDownItems: [],
+            selectedTags: [],
         }
         let search = this.history.location.search;
         let params = new URLSearchParams(search);
@@ -166,7 +168,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
 
         this.setState({ loading: false })
     }
-   
+
     /**
     * Method to get all grades from database.
     * */
@@ -193,7 +195,8 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
     private getTags = async () => {
         const tagsResponse = await getAllTags(this.handleAuthenticationFailure);
         if (tagsResponse.status === 200 && tagsResponse.data) {
-            this.setState({ allTags: tagsResponse.data });
+            let allTags: IDropDownItem[] = tagsResponse.data.map((tag: ITag) => { return { key: tag.id, header: tag.tagName } });
+            this.setState({ allTags: tagsResponse.data, allTagsDropDownItems: allTags });
         }
     }
 
@@ -226,7 +229,13 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                     loading: false,
                     filterItemEdit: learningModuleDetail.resources,
                     isImageNextBtnDisabled: isImageNextBtnDisabled,
-                    learningModuleTag: learningModuleDetail.learningModule.learningModuleTag,
+                    selectedTags: learningModuleDetail.learningModule.learningModuleTag.map((tag: ILearningModuleTag) => {
+                        let dropDownTag: IDropDownItem = {
+                            key: tag.tagId,
+                            header: tag.tag.tagName
+                        }
+                        return dropDownTag
+                    }),
                 })
                 let filteredItems: IResourceDetail[] = []
                 if (this.state.filteredItem) {
@@ -263,32 +272,6 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
     }
 
     /**
-    *Check if tag is valid
-    *@param {ILearningModuleTag} learningModuleTag selected tag.
-    */
-    private validateTag = (learningModuleTag: ILearningModuleTag) => {
-        let validationParams: ITagValidationParameters = { isExisting: false, isTagsCountValid: false };
-
-        if (this.state.learningModuleTag ? this.state.learningModuleTag.length < Constants.tagsMaxCount : false) {
-            validationParams.isTagsCountValid = true;
-        }
-
-        let tags = this.state.learningModuleTag;
-        let isTagExist = tags ? tags.find(x => x.tagId === learningModuleTag.tagId) : false;
-
-        if (isTagExist) {
-            validationParams.isExisting = true;
-        }
-
-        this.setState({ tagValidation: validationParams });
-
-        if (!validationParams.isExisting && validationParams.isTagsCountValid) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
     *Returns text component containing error message for tag input field.
     */
     private getTagError = () => {
@@ -296,11 +279,6 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
         if (!this.state.tagValidation.isTagsCountValid) {
             return (<Text content={this.localize("tagsCountError")} error size="small" />);
         }
-
-        else if (this.state.tagValidation.isExisting) {
-            return (<Text content={this.localize("sameTagExistsError")} error size="small" />);
-        }
-
         return (<></>);
     }
 
@@ -320,7 +298,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
     private handleGradeChange = (event: any, dropdownProps?: any) => {
         let grade = dropdownProps.value;
         if (grade) {
-            let moduleGrade: IGrade = {id: grade.key, gradeName: grade.header};
+            let moduleGrade: IGrade = { id: grade.key, gradeName: grade.header };
             let learningModuleDetail = Object.assign({}, this.state.learningModuleDetail);
             learningModuleDetail.gradeId = moduleGrade.id;
             learningModuleDetail.grade = moduleGrade;
@@ -336,9 +314,9 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
     private handleSubjectChange = (event: any, dropdownProps?: any) => {
         let subject = dropdownProps.value;
         if (subject) {
-            let moduleSubject: ISubject = {id: subject.key, subjectName: subject.header};
+            let moduleSubject: ISubject = { id: subject.key, subjectName: subject.header };
             let learningModuleDetail = Object.assign({}, this.state.learningModuleDetail);
-            learningModuleDetail.subjectId =moduleSubject.id;
+            learningModuleDetail.subjectId = moduleSubject.id;
             learningModuleDetail.subject = moduleSubject;
             this.setState({ learningModuleDetail: learningModuleDetail, isSubjectValid: true, error: "" });
         }
@@ -350,15 +328,23 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
     * @param {string} dropdownProps props received on dropdown value click
     */
     private handleTagChange = (event: any, dropdownProps?: any) => {
+        debugger;
         let tag = dropdownProps.value;
+        if (tag.length > Resources.tagsMaxCount) {
+            this.setState({ tagValidation: { isTagsCountValid: false } })
+            return;
+        }
         if (tag) {
-            let learningModuleTag = {} as ILearningModuleTag;
-            learningModuleTag.tagId = tag.key;
-            if (this.validateTag(learningModuleTag)) {
-                let learningModuleTagDetails = [...this.state.learningModuleTag];
-                learningModuleTagDetails.push(learningModuleTag);
-                this.setState({ tagValidation: { isExisting: false, isTagsCountValid: true, }, learningModuleTag: learningModuleTagDetails });
-            }
+            this.setState({ selectedTags: tag });
+
+            let learningModuleTag = tag.map((dropDownItem: IDropDownItem) => {
+                let learningModuleTag = {} as ILearningModuleTag;
+                learningModuleTag.tagId = dropDownItem.key;
+                return learningModuleTag
+            });
+
+            this.setState({ tagValidation: { isTagsCountValid: true, }, learningModuleTag: learningModuleTag });
+
         }
     }
 
@@ -419,16 +405,6 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
             return (<Text content={this.localize("resourceTitleAlreadyExists")} error size="small" />);
         }
         return (<></>);
-    }
-
-    /**
-    *Sets state of tagsList by removing tag using its index.
-    *@param {Number} index Index of tag to be deleted.
-    */
-    private onTagRemoveClick = (index: number) => {
-        let learningModuleTag = this.state.learningModuleTag;
-        learningModuleTag.splice(index, 1);
-        this.setState({ learningModuleTag: learningModuleTag, tagValidation: { isExisting: false, isTagsCountValid: true } });
     }
 
     /**
@@ -507,6 +483,15 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
             if (this.state.isEditMode) {
                 moduleData = await this.updateLearningModuleAsync() as ILearningModuleDetail;
                 let isSuccess = moduleData ? Resources.successFlag : Resources.errorFlag;
+                let tags = this.state.selectedTags.map((dropDownItem: IDropDownItem) => {
+                    let tags: ITag = { tagName: dropDownItem.header, id: dropDownItem.key }
+                    let learningModuleTag: ILearningModuleTag = {
+                        tag: tags,
+                        tagId: dropDownItem.key
+                    }
+                    return learningModuleTag
+                });
+                moduleData.learningModuleTag = tags;
                 let details: any = { isSuccess: isSuccess, title: this.state.learningModuleDetail.title, saveResponse: moduleData }
                 microsoftTeams.tasks.submitTask(details);
             }
@@ -517,16 +502,18 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                 }
                 else {
                     let isSuccess = moduleData ? Resources.successFlag : Resources.errorFlag;
-                    let moduleTags = [...this.state.learningModuleTag];
-                    moduleTags.forEach((resourceTag) => {
-                        let tag: ITag = {
-                            tagName: getTagById(resourceTag.tagId, this.state.allTags)
-                        };
-                        resourceTag.tag = tag
+                   
+                    let tags = this.state.selectedTags.map((dropDownItem: IDropDownItem) => {
+                        let tags: ITag = { tagName: dropDownItem.header, id: dropDownItem.key }
+                        let learningModuleTag: ILearningModuleTag = {
+                            tag: tags,
+                            tagId: dropDownItem.key
+                        }
+                        return learningModuleTag
                     });
                     moduleData.grade = this.state.learningModuleDetail.grade;
                     moduleData.subject = this.state.learningModuleDetail.subject;
-                    moduleData.learningModuleTag = moduleTags;  
+                    moduleData.learningModuleTag = tags
                     let details: any = { isSuccess: isSuccess, title: this.state.learningModuleDetail.title, saveResponse: moduleData }
                     microsoftTeams.tasks.submitTask(details);
                 }
@@ -622,7 +609,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
             learningModule: module,
             resources: moduleResources
         }
-         
+
         // Store new resource details in storage.            
         response = await updateLearningModule(learningModuleDetail.learningModule.id, learningModuleDetail);
         if (response.status !== 200 && response.status !== 204) {
@@ -681,7 +668,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                 {
                     this.state.isContentPage &&
                     <div className="container-tab-lm">
-                        <div className="create-content-main">
+                        <div className="create-content-lm">
                             <div className={this.requestViewMode == "0" || this.state.filteredItem.length == 0 ? "create-sub-div-add" : "create-sub-div"}>
                                 <Flex gap="gap.small">
                                     <Flex.Item size="size.half">
@@ -760,30 +747,17 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                                     </Flex.Item>
                                 </Flex>
                                 <Dropdown
+                                    multiple
                                     search
-                                    items={this.state.allTags.map((tag: ITag) => { return { key: tag.id, header: tag.tagName } })}
+                                    items={this.state.allTagsDropDownItems}
                                     placeholder={this.localize('tagPlaceholderText')}
                                     noResultsMessage={this.localize("noTagFoundError")}
                                     toggleIndicator={{ styles: { display: 'none' } }}
                                     fluid
-                                    onChange={this.handleTagChange}
+                                    onChange={(e, selectedOption) => { this.handleTagChange(e, selectedOption) }}
                                     className="tag-dropdown-input"
-                                    searchQuery={this.state.tag}
-                                    id="tag-lm"
+                                    value={this.state.selectedTags}
                                 />
-                                <div className="tags-wrapper-lm">
-                                    <Flex gap="gap.smaller" vAlign="center">
-                                        <Flex>
-                                            {
-                                                this.state.learningModuleTag.map((value: ILearningModuleTag, index) => {
-                                                    if (value) {
-                                                        return <Tag key={index} index={index} tagContent={this.getTagById(value.tagId)} showRemoveIcon={true} onRemoveClick={this.onTagRemoveClick} />
-                                                    }
-                                                })
-                                            }
-                                        </Flex>
-                                    </Flex>
-                                </div>
 
                                 {this.state.isEditMode &&
                                     <LearningModuleResourceTable responsesData={this.state.filteredItem} onCheckBoxChecked={this.onLearningModuleSelected} isGradeSubjectDisable={this.state.isGradeSubjectDisable} windowWidth={this.state.windowWidth} />}
@@ -824,12 +798,13 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                         defaultImageSearchText={this.state.learningModuleDetail!.title}
                         isImageNextBtnDisabled={this.state.isImageNextBtnDisabled}
                         existingImage={this.state.learningModuleDetail!.imageUrl}
-                        windowWidth={ this.state.windowWidth}
+                        windowWidth={this.state.windowWidth}
                     />
                 }
                 {
                     this.state.isPreviewPage && !this.state.isEditMode &&
                     <PreviewContent
+                        selectedTags={this.state.selectedTags}
                         resourceDetail={this.state.learningModuleDetail}
                         showImage={true}
                         isViewOnly={true}
@@ -840,7 +815,7 @@ class LearningModule extends React.Component<WithTranslation, ILearningModuleSta
                 {
                     this.state.isPreviewPage && this.state.isEditMode &&
                     <Flex>
-                        <LearningModuleEditPreviewItems handleShareButtonClick={this.handleShareButtonClick} handlePreviewBackButtonClick={this.handlePreviewBackButtonClick} learningModuleDetails={this.state.learningModuleDetail} responsesData={this.state.filterItemEdit} learningModuleTags={this.state.learningModuleTag} getTagById={this.getTagById} />
+                        <LearningModuleEditPreviewItems handleShareButtonClick={this.handleShareButtonClick} handlePreviewBackButtonClick={this.handlePreviewBackButtonClick} learningModuleDetails={this.state.learningModuleDetail} responsesData={this.state.filterItemEdit} learningModuleTags={this.state.selectedTags} getTagById={this.getTagById} />
                     </Flex>
                 }
             </div>
