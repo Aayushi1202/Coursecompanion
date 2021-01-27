@@ -435,3 +435,6 @@ local.settings.json
 !.vscode/launch.json
 !.vscode/extensions.json
 .ionide/*
+/Source/Microsoft.Teams.Apps.LearnNow/ClientApp/build
+*.eslintcache
+*.arm.json

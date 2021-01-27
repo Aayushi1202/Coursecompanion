@@ -299,7 +299,7 @@
             },
             {
               "name": "Bot:AppBaseUri",
-              "value": "[variables('appBaseUri')]"
+              "value": "[variables('appBaseUri')] "
             },
             {
               "name": "Bot:TenantId",
@@ -347,7 +347,7 @@
             },
             {
               "name": "CognitiveServiceKey",
-              "value": "[listKeys(variables('bingSearchName'),'2020-06-10').key1]"
+              "value": "    listKeys(resourceId('Microsoft.Bing/accounts', variables('bingSearchName')),'2020-06-10').key1)"
             },
             {
               "name": "SecurityGroup:TeacherSecurityGroupId",
@@ -360,6 +360,10 @@
             {
               "name": "SecurityGroup:ModeratorsGroupId",
               "value": "[parameters('moderatoryGroupId')]"
+            },
+            {
+              "name": "SecurityGroup:ModeratorsGroupId",
+              "value": ""
             },
             {
               "name": "i18n:DefaultCulture",
@@ -383,7 +387,7 @@
             },
             {
               "name": "WEBSITE_NODE_DEFAULT_VERSION",
-              "value": "12.18.3"
+              "value": "10.15.2"
             }
           ]
         },
@@ -398,7 +402,7 @@
         "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
       ],
-      "resources": [
+	  "resources": [
         {
           "apiVersion": "2016-08-01",
           "name": "web",
@@ -643,7 +647,7 @@
         "enabledForDeployment": "true",
         "enabledForTemplateDeployment": "true",
         "enabledForDiskEncryption": "true",
-        "tenantId": "[reference(concat('Microsoft.Web/sites/', variables('botAppName')), '2018-02-01', 'Full').identity.tenantId]",
+		"tenantId": "[reference(concat('Microsoft.Web/sites/', variables('botAppName')), '2018-02-01', 'Full').identity.tenantId]",
         "accessPolicies": [
           {
             "tenantId": "[reference(resourceId('Microsoft.Web/sites', variables('botAppName')), '2016-08-01', 'Full').identity.tenantId]",
@@ -734,7 +738,7 @@
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Bing/accounts', variables('bingSearchName'))]"
+		"[resourceId('Microsoft.Bing/accounts', variables('bingSearchName'))]"
       ],
       "properties": {
         "value": "[listKeys(variables('bingSearchName'),'2020-06-10').key1]"
