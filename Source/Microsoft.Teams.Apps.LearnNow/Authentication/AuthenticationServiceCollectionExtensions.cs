@@ -69,14 +69,20 @@ namespace Microsoft.Teams.Apps.LearnNow.Authentication
                     PolicyNames.MustBeTeamMemberUserPolicy,
                     policyBuilder => policyBuilder.AddRequirements(mustBePartOfTeamRequirement));
 
-                var mustBeMemberOfSecurityGroupRequirement = new MustBeMemberOfSecurityGroupPolicyRequirement();
+                var mustBeMemberOfSecurityGroupRequirement = new MustBeTeacherOrAdminUserPolicyRequirement();
                 options.AddPolicy(
-                   PolicyNames.MustBeMemberOfSecurityGroupPolicy,
+                   PolicyNames.MustBeTeacherOrAdminPolicy,
                    policyBuilder => policyBuilder.AddRequirements(mustBeMemberOfSecurityGroupRequirement));
+
+                var mustBeModeratorRequirement = new MustBeModeratorPolicyRequirement();
+                options.AddPolicy(
+                    PolicyNames.MustBeModeratorPolicy,
+                    policyBuilder => policyBuilder.AddRequirements(mustBeModeratorRequirement));
             });
 
-            services.AddSingleton<IAuthorizationHandler, MustBeTeamMemberUserPolicyHandler>();
-            services.AddSingleton<IAuthorizationHandler, MustBeMemberOfSecurityGroupPolicyHandler>();
+            services.AddTransient<IAuthorizationHandler, MustBeTeamMemberUserPolicyHandler>();
+            services.AddSingleton<IAuthorizationHandler, MustBeTeacherOrAdminUserPolicyHandler>();
+            services.AddSingleton<IAuthorizationHandler, MustBeModeratorPolicyHandler>();
         }
 
         /// <summary>

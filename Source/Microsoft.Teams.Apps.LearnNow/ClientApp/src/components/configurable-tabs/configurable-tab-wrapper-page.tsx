@@ -35,11 +35,14 @@ class ConfigurableTeamsPage extends React.Component<WithTranslation, IConfigurab
     userAADObjectId?: string | null = null;
     botId: string = "";
     tabId?: string | null = null;
+    teamId: string;
+    groupId: string  | null = null;
     learningModuleId?: string | null = null;
 
     constructor(props: any) {
         super(props);
         this.localize = this.props.t;
+        this.teamId = "";
         this.state = {
             windowWidth: window.innerWidth,
             loader: false,
@@ -55,10 +58,11 @@ class ConfigurableTeamsPage extends React.Component<WithTranslation, IConfigurab
         microsoftTeams.getContext((context) => {
             this.userAADObjectId = context.userObjectId!
             this.tabId = context.entityId!;
+            this.groupId = context.groupId!;
 
             if (this.tabId) {
                 setTimeout(async () => {
-                    let response = await getTabConfiguration(this.tabId!);
+                    let response = await getTabConfiguration(this.tabId!, this.groupId!);
                     if (response.status === 200 && response.data) {
                         this.learningModuleId = response.data.learningModuleId;
                         this.getAllResources();

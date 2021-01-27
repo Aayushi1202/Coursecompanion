@@ -101,9 +101,6 @@ class AddSubject extends React.Component<WithTranslation, IAddSubjectState> {
                             content={this.localize("adminCreateSubjectLabelText")}
                             size="medium"
                         />
-                        <Flex.Item push>
-                            {this.getErrorMessage()}
-                        </Flex.Item>
                     </Flex>
                     <div className="add-form-input">
                         <Input

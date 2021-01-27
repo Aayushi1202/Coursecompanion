@@ -80,6 +80,14 @@
         "description": "Location for all resources."
       }
     },
+    "moderatoryGroupId": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "metadata": {
+        "description": "Teams group id of moderators who can add/edit/delete grade, subject and tag metadata."
+      }
+    },
     "teacherSecurityGroup": {
       "type": "string",
       "minLength": 36,
@@ -180,7 +188,7 @@
       "metadata": {
         "description": "The branch of the GitHub repository to deploy."
       },
-      "defaultValue": "main"
+      "defaultValue": "master"
     }
   },
   "variables": {
@@ -228,19 +236,14 @@
       }
     },
     {
-      "type": "Microsoft.CognitiveServices/accounts",
-      "apiVersion": "2017-04-18",
+      "type": "Microsoft.Bing/accounts",
+      "apiVersion": "2020-06-10",
       "name": "[variables('bingSearchName')]",
       "location": "global",
       "sku": {
         "name": "S1"
       },
-      "kind": "Bing.Search.v7",
-      "properties": {
-        "apiProperties": {},
-        "customSubDomainName": "[variables('bingSearchName')]",
-        "publicNetworkAccess": "Enabled"
-      }
+      "kind": "Bing.Search.v7"
     },
     {
       "apiVersion": "2015-05-01",
@@ -296,7 +299,7 @@
             },
             {
               "name": "Bot:AppBaseUri",
-              "value": "[if(variables('useFrontDoor'), concat('https://', variables('frontDoorDomain')), '')] "
+              "value": "[variables('appBaseUri')]"
             },
             {
               "name": "Bot:TenantId",
@@ -308,19 +311,19 @@
             },
             {
               "name": "MicrosoftAppId",
-              "value": ""
+              "value": "[parameters('botClientId')]"
             },
             {
               "name": "MicrosoftAppPassword",
-              "value": ""
+              "value": "[parameters('botClientSecret')]"
             },
             {
               "name": "Storage:TableStorageConnectionString",
-              "value": ""
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')),'2015-05-01-preview').key1)]"
             },
             {
               "name": "Storage:BlobConnectionString",
-              "value": ""
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')),'2015-05-01-preview').key1)]"
             },
             {
               "name": "Logging:LogLevel:Default",
@@ -328,7 +331,7 @@
             },
             {
               "name": "SQLStorage:ConnectionString",
-              "value": ""
+              "value": "[parameters('cacheDurationInMinutes')]"
             },
             {
               "name": "ApplicationInsights:InstrumentationKey",
@@ -344,15 +347,19 @@
             },
             {
               "name": "CognitiveServiceKey",
-              "value": ""
+              "value": "[listKeys(variables('bingSearchName'),'2020-06-10').key1]"
             },
             {
               "name": "SecurityGroup:TeacherSecurityGroupId",
-              "value": ""
+              "value": "[parameters('teacherSecurityGroup')]"
             },
             {
               "name": "SecurityGroup:AdminSecurityGroupId",
-              "value": ""
+              "value": "[parameters('adminSecurityGroup')]"
+            },
+            {
+              "name": "SecurityGroup:ModeratorsGroupId",
+              "value": "[parameters('moderatoryGroupId')]"
             },
             {
               "name": "i18n:DefaultCulture",
@@ -376,7 +383,7 @@
             },
             {
               "name": "WEBSITE_NODE_DEFAULT_VERSION",
-              "value": "12.18.0"
+              "value": "12.18.3"
             }
           ]
         },
@@ -390,6 +397,22 @@
       "dependsOn": [
         "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+      ],
+      "resources": [
+        {
+          "apiVersion": "2016-08-01",
+          "name": "web",
+          "type": "sourcecontrols",
+          "condition": "[not(empty(parameters('gitRepoUrl')))]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('botAppName'))]"
+          ],
+          "properties": {
+            "RepoUrl": "[parameters('gitRepoUrl')]",
+            "branch": "[parameters('gitBranch')]",
+            "IsManualIntegration": true
+          }
+        }
       ]
     },
     {
@@ -451,7 +474,7 @@
           ],
           "properties": {
             "startIpAddress": "0.0.0.0",
-            "endIpAddress": "0.0.0.0"
+            "endIpAddress": "255.255.255.255"
           }
         }
       ]
@@ -620,14 +643,14 @@
         "enabledForDeployment": "true",
         "enabledForTemplateDeployment": "true",
         "enabledForDiskEncryption": "true",
-        "tenantId": "[parameters('tenantId')]",
+        "tenantId": "[reference(concat('Microsoft.Web/sites/', variables('botAppName')), '2018-02-01', 'Full').identity.tenantId]",
         "accessPolicies": [
           {
             "tenantId": "[reference(resourceId('Microsoft.Web/sites', variables('botAppName')), '2016-08-01', 'Full').identity.tenantId]",
             "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('botAppName')), '2016-08-01', 'Full').identity.principalId]",
             "permissions": {
               "secrets": [
-                "get"
+                "all"
               ]
             }
           }
@@ -647,7 +670,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2018-02-14",
-      "name": "[concat(variables('keyVaultName'), '/', 'Storage_TableStorageConnectionString')]",
+      "name": "[concat(variables('keyVaultName'), '/', 'Storage-TableStorageConnectionString')]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
@@ -683,7 +706,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2018-02-14",
-      "name": "[concat(variables('keyVaultName'), '/', 'SQLStorage_ConnectionString')]",
+      "name": "[concat(variables('keyVaultName'), '/', 'SQLStorage-ConnectionString')]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
@@ -695,7 +718,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2018-02-14",
-      "name": "[concat(variables('keyVaultName'), '/', 'Storage_BlobConnectionString')]",
+      "name": "[concat(variables('keyVaultName'), '/', 'Storage-BlobConnectionString')]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
@@ -711,16 +734,16 @@
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.CognitiveServices/accounts', variables('bingSearchName'))]"
+        "[resourceId('Microsoft.Bing/accounts', variables('bingSearchName'))]"
       ],
       "properties": {
-        "value": "[listKeys(variables('bingSearchName'),'2017-04-18').key1]"
+        "value": "[listKeys(variables('bingSearchName'),'2020-06-10').key1]"
       }
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2018-02-14",
-      "name": "[concat(variables('keyVaultName'), '/', 'SecurityGroup_TeacherSecurityGroupId')]",
+      "name": "[concat(variables('keyVaultName'), '/', 'SecurityGroup-TeacherSecurityGroupId')]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
@@ -732,13 +755,25 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2018-02-14",
-      "name": "[concat(variables('keyVaultName'), '/', 'SecurityGroup_AdminSecurityGroupId')]",
+      "name": "[concat(variables('keyVaultName'), '/', 'SecurityGroup-AdminSecurityGroupId')]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
       ],
       "properties": {
         "value": "[parameters('adminSecurityGroup')]"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(variables('keyVaultName'), '/', 'SecurityGroup-ModeratorGroupId')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ],
+      "properties": {
+        "value": "[parameters('moderatoryGroupId')]"
       }
     }
   ],

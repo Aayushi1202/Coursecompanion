@@ -69,6 +69,7 @@ class CommandBar extends React.Component<ICommandBarProps, ICommandbarState> {
                 <Button icon={<AddIcon />} content={this.localize("commandBarAddNewLabel")} text className="add-new-button" onClick={this.props.onAddButtonClick} />
                 <Button icon={<EditIcon />} content={this.localize("commandBarEditLabel")} text disabled={!this.props.isEditEnable} className="edit-button" onClick={this.props.onEditButtonClick} />
                 <Dialog
+                    className="delete-dialog-mobile"
                     cancelButton={this.localize("cancelButtonText")}
                     confirmButton={this.localize("confirmButtonText")}
                     content={this.localize("deletePopupBodyText")}

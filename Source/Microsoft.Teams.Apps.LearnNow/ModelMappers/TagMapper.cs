@@ -41,11 +41,11 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// Gets tag view model from entity model.
         /// </summary>
         /// <param name="tags">Collection of tag entity model objects.</param>
-        /// <param name="userDetails">Collection of user detail objects.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns collection of tag view model objects.</returns>
         public IEnumerable<TagViewModel> MapToViewModel(
             IEnumerable<Tag> tags,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             tags = tags ?? throw new ArgumentNullException(nameof(tags));
 
@@ -54,7 +54,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 Id = tag.Id,
                 TagName = tag.TagName,
                 UpdatedOn = tag.UpdatedOn,
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == tag.CreatedBy).DisplayName,
+                UserDisplayName = idToNameMap[tag.CreatedBy],
             });
         }
     }

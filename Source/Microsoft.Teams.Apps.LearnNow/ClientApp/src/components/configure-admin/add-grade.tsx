@@ -109,9 +109,6 @@ class AddGrade extends React.Component<WithTranslation, IAddGradeState> {
                 <div className="add-form-container">
                     <Flex gap="gap.small">
                         <Text content={this.localize("adminCreateGradeLabelText")} size="medium" />
-                        <Flex.Item push>
-                            {this.getErrorMessage()}
-                        </Flex.Item>
                     </Flex>
                     <div className="add-form-input">
                         <Input placeholder={this.localize("adminTextGradeInputPlaceholder")} fluid required maxLength={Resources.gradeInputMaxLength} value={this.state.grade} onChange={this.onGradeValueChange} />

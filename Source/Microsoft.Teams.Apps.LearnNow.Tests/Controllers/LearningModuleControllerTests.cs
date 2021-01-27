@@ -13,11 +13,13 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.LearnNow.Controllers;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure.Models;
     using Microsoft.Teams.Apps.LearnNow.ModelMappers;
     using Microsoft.Teams.Apps.LearnNow.Models;
+    using Microsoft.Teams.Apps.LearnNow.Models.Configuration;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.GroupMembers;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Users;
     using Microsoft.Teams.Apps.LearnNow.Tests.Fakes;
@@ -39,6 +41,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
         private Mock<IResourceModuleMapper> resourceModuleMapper;
         private Mock<IResourceMapper> resourcMapper;
         private Mock<IMemberValidationService> memberValidationService;
+        private IOptions<SecurityGroupSettings> securityGroupOptions;
 
         /// <summary>
         /// Initialize all test variables.
@@ -54,6 +57,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
             this.usersService = new Mock<IUsersService>();
             this.resourcMapper = new Mock<IResourceMapper>();
             this.memberValidationService = new Mock<IMemberValidationService>();
+            this.securityGroupOptions = Options.Create<SecurityGroupSettings>(new SecurityGroupSettings());
 
             this.learningModuleController = new LearningModuleController(
                 this.logger.Object,
@@ -63,7 +67,8 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                 this.learningModuleMapper.Object,
                 this.resourceModuleMapper.Object,
                 this.resourcMapper.Object,
-                this.memberValidationService.Object)
+                this.memberValidationService.Object,
+                this.securityGroupOptions)
             {
                 ControllerContext = new ControllerContext(),
             };
@@ -81,8 +86,21 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
             // ARRANGE
             var learningModuleId = Guid.Parse(FakeData.Id);
             var lmMapping = new List<ResourceModuleMapping>();
+            var moduleVotes = new List<LearningModuleVote>();
+            IEnumerable<LearningModuleViewModel> modules = new List<LearningModuleViewModel>
+            {
+                new LearningModuleViewModel
+                {
+                    Title = FakeData.GetLearningModules().FirstOrDefault().Title,
+                    Id = learningModuleId,
+                },
+            };
+            Dictionary<Guid, List<ResourceDetailModel>> resourcesWithVotes = new Dictionary<Guid, List<ResourceDetailModel>>();
             this.unitOfWork.Setup(uow => uow.LearningModuleRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(FakeData.GetLearningModules().FirstOrDefault);
+            this.unitOfWork.Setup(uow => uow.LearningModuleVoteRepository.FindAsync(It.IsAny<Expression<Func<LearningModuleVote, bool>>>())).ReturnsAsync(moduleVotes);
             this.unitOfWork.Setup(uow => uow.ResourceModuleRepository.FindAsync(It.IsAny<Expression<Func<ResourceModuleMapping, bool>>>())).ReturnsAsync(lmMapping);
+            this.unitOfWork.Setup(uow => uow.ResourceRepository.GetResourcesWithVotes(It.IsAny<IEnumerable<Resource>>())).Returns(resourcesWithVotes);
+            this.learningModuleMapper.Setup(learningModuleMapper => learningModuleMapper.MapToViewModel(It.IsAny<LearningModule>(), It.IsAny<Guid>(), It.IsAny<IEnumerable<LearningModuleVote>>())).Returns(FakeData.GetPayLoadLearningModule());
 
             // ACT
             var result = (ObjectResult)await this.learningModuleController.GetLearningModuleDetailAsync(learningModuleId);
@@ -111,7 +129,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                 },
             };
             this.unitOfWork.Setup(uow => uow.LearningModuleRepository.GetLearningModulesAsync(It.IsAny<FilterModel>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>())).ReturnsAsync(FakeData.GetLearningModules);
-            this.learningModuleMapper.Setup(learningModuleMapper => learningModuleMapper.MapToViewModels(It.IsAny<IEnumerable<LearningModule>>(), It.IsAny<Guid>(), It.IsAny<IEnumerable<UserDetail>>())).Returns(modules);
+            this.learningModuleMapper.Setup(learningModuleMapper => learningModuleMapper.MapToViewModels(It.IsAny<Dictionary<Guid, List<LearningModuleDetailModel>>>(), It.IsAny<Guid>(), It.IsAny<Dictionary<Guid, string>>())).Returns(modules);
             var filterModel = new FilterModel();
 
             // ACT
@@ -140,7 +158,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
             };
             this.learningModuleMapper.Setup(resourceMapper => resourceMapper.MapToDTO(It.IsAny<LearningModuleViewModel>(), It.IsAny<Guid>())).Returns(FakeData.GetLearningModules().FirstOrDefault());
             this.unitOfWork.Setup(uow => uow.LearningModuleRepository.Add(It.IsAny<LearningModule>())).Returns(FakeData.GetLearningModules().FirstOrDefault());
-            this.learningModuleMapper.Setup(resourceMapper => resourceMapper.MapToViewModel(It.IsAny<LearningModule>(), It.IsAny<IEnumerable<UserDetail>>())).Returns(learningModule);
+            this.learningModuleMapper.Setup(resourceMapper => resourceMapper.MapToViewModel(It.IsAny<LearningModule>(), It.IsAny<Dictionary<Guid, string>>())).Returns(learningModule);
             this.unitOfWork.Setup(uow => uow.LearningModuleRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(FakeData.GetLearningModules().FirstOrDefault);
 
             // ACT
@@ -287,8 +305,10 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                     ImageUrl = "https://test.jpg",
                 },
             };
-            this.memberValidationService.Setup(validationService => validationService.ValidateAdminAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
-            this.unitOfWork.Setup(uow => uow.LearningModuleRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(FakeData.GetLearningModule());
+            var module = FakeData.GetLearningModule();
+            module.CreatedBy = Guid.NewGuid();
+            this.memberValidationService.Setup(validationService => validationService.ValidateMemberAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+            this.unitOfWork.Setup(uow => uow.LearningModuleRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(module);
 
             // ACT
             var result = (ObjectResult)await this.learningModuleController.PatchAsync(Guid.NewGuid(), learningModuleModel);
@@ -306,8 +326,11 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
         public async Task DeleteAsync_DeleteLearningModuleWithNonAdminUser_ReturnsUnauthorizedResult()
         {
             // ARRANGE
-            this.memberValidationService.Setup(validationService => validationService.ValidateAdminAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
-            this.unitOfWork.Setup(uow => uow.LearningModuleRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(FakeData.GetLearningModule());
+            var module = FakeData.GetLearningModule();
+            module.CreatedBy = Guid.NewGuid();
+            this.memberValidationService.Setup(validationService => validationService.ValidateMemberAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+            this.unitOfWork.Setup(uow => uow.LearningModuleRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(module);
+            this.securityGroupOptions.Value.AdminGroupId = Guid.NewGuid().ToString();
 
             // ACT
             var result = (ObjectResult)await this.learningModuleController.DeleteAsync(Guid.NewGuid());

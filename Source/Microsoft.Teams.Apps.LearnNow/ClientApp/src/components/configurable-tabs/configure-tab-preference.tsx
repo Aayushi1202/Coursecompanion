@@ -38,6 +38,7 @@ interface IConfigureTabPreference {
 */
 class ConfigureTabPreference extends React.Component<WithTranslation, IConfigureTabPreference> {
     localize: TFunction;
+    groupId: string;
     teamId: string;
     channelId: string;
     tabId: string;
@@ -46,6 +47,7 @@ class ConfigureTabPreference extends React.Component<WithTranslation, IConfigure
         super(props);
         this.history = props.history;
         this.localize = this.props.t;
+        this.groupId = "";
         this.teamId = "";
         this.channelId = "";
         this.tabId = "";
@@ -68,11 +70,12 @@ class ConfigureTabPreference extends React.Component<WithTranslation, IConfigure
     }
 
     /**
-    * Used to initialize Microsoft Teams sdk
+    * Used to initialize Microsoft Teams SDK
     */
     public componentDidMount() {
         microsoftTeams.initialize();
         microsoftTeams.getContext(async (context: microsoftTeams.Context) => {
+            this.groupId = context.groupId!;
             this.teamId = context.teamId!;
             this.channelId = context.channelId!;
             this.tabId = context.entityId!;
@@ -109,7 +112,7 @@ class ConfigureTabPreference extends React.Component<WithTranslation, IConfigure
                 id: this.tabId ? this.tabId : undefined,
             };
 
-            let response = this.tabId ? await updateTabConfiguration(configureDetail, this.tabId!) : await createTabConfiguration(configureDetail);
+            let response = this.tabId ? await updateTabConfiguration(configureDetail, this.tabId!, this.groupId) : await createTabConfiguration(configureDetail, this.groupId);
 
             if (response.status === 200 && response.data) {
                 microsoftTeams.settings.setSettings({

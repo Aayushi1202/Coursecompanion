@@ -11,7 +11,6 @@ namespace Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Users
     using System.Threading.Tasks;
     using Microsoft.Graph;
     using Microsoft.Teams.Apps.LearnNow.Helpers;
-    using Microsoft.Teams.Apps.LearnNow.Models;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Authentication;
 
     /// <summary>
@@ -40,21 +39,14 @@ namespace Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Users
         /// <param name="loggedInUserObjectId">Azure AD user id of the signed in user</param>
         /// <param name="authorizationHeader">Authorization header value. Usually this value will be provided in HTTP context of signed in user.</param>
         /// <param name="userObjectIds">Collection of AAD Object ids of users.</param>
-        /// <returns>Returns user details for specified ids.</returns>
-        public async Task<IEnumerable<UserDetail>> GetUserDisplayNamesAsync(string loggedInUserObjectId, string authorizationHeader, IEnumerable<string> userObjectIds)
+        /// <returns>Returns user id and name key value pairs.</returns>
+        public async Task<Dictionary<Guid, string>> GetUserDisplayNamesAsync(string loggedInUserObjectId, string authorizationHeader, IEnumerable<string> userObjectIds)
         {
             var accessToken = await this.accessTokenHelper.GetAccessTokenAsync(loggedInUserObjectId, authorizationHeader);
 
             var resourceOwnerDetails = await this.GetUserDetailsAsync(userObjectIds, accessToken);
 
-            var users = resourceOwnerDetails
-                .Select(user => new UserDetail
-                {
-                    UserId = Guid.Parse(user.Id),
-                    DisplayName = user.DisplayName,
-                });
-
-            return users;
+            return resourceOwnerDetails.ToDictionary(k => Guid.Parse(k.Id), v => v.DisplayName);
         }
 
         /// <summary>

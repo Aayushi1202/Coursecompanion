@@ -15,6 +15,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
     using Microsoft.Data.SqlClient;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Teams.Apps.LearnNow.Authentication.AuthenticationPolicy;
     using Microsoft.Teams.Apps.LearnNow.Common;
     using Microsoft.Teams.Apps.LearnNow.Helpers;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure;
@@ -143,6 +144,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="gradeDetail">Holds grade detail entity data.</param>
         /// <returns>Returns true for successful operation.</returns>
         [HttpPost]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> PostAsync([FromBody] GradeViewModel gradeDetail)
         {
             if (gradeDetail == null)
@@ -195,6 +197,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="gradeDetail">Holds grade detail entity data.</param>
         /// <returns>Returns true for successful operation.</returns>
         [HttpPatch("{id}")]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] GradeViewModel gradeDetail)
         {
             if (gradeDetail == null)
@@ -257,6 +260,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="gradeRequestsData">Holds grade detail entity data.</param>
         /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
         [HttpPost("gradesdelete")]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> DeleteAsync([FromBody] List<AdminConfigBaseModel> gradeRequestsData)
         {
             this.RecordEvent("Grade - HTTP Delete call to delete grades is initiated.", RequestType.Initiated);

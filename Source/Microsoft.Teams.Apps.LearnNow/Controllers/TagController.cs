@@ -15,6 +15,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
     using Microsoft.Data.SqlClient;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Teams.Apps.LearnNow.Authentication.AuthenticationPolicy;
     using Microsoft.Teams.Apps.LearnNow.Common;
     using Microsoft.Teams.Apps.LearnNow.Helpers;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure;
@@ -142,6 +143,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="tagDetail">Holds tag detail entity data.</param>
         /// <returns>Returns saved tag details.</returns>
         [HttpPost]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> PostAsync([FromBody] TagViewModel tagDetail)
         {
             this.RecordEvent("Tags - HTTP Post call Initiated.", RequestType.Initiated);
@@ -188,6 +190,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="tagDetail">Holds tag detail entity data.</param>
         /// <returns>Returns updated tag details.</returns>
         [HttpPatch("{id}")]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] TagViewModel tagDetail)
         {
             this.RecordEvent("Tags - HTTP Patch call to update tag details.", RequestType.Initiated);
@@ -249,6 +252,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="tagRequestsData">Holds tag detail entity data.</param>
         /// <returns>Returns true for successful operation.</returns>
         [HttpPost("tagsdelete")]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> DeleteAsync([FromBody] List<AdminConfigBaseModel> tagRequestsData)
         {
             this.RecordEvent("Tags - HTTP Delete call to delete tags initiated.", RequestType.Initiated);

@@ -13,12 +13,14 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.LearnNow.Authentication.AuthenticationPolicy;
     using Microsoft.Teams.Apps.LearnNow.Common;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure.Models;
     using Microsoft.Teams.Apps.LearnNow.ModelMappers;
     using Microsoft.Teams.Apps.LearnNow.Models;
+    using Microsoft.Teams.Apps.LearnNow.Models.Configuration;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.GroupMembers;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Users;
 
@@ -56,6 +58,11 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         private readonly IMemberValidationService memberValidationService;
 
         /// <summary>
+        /// Instance of IOptions to read security group data from azure application configuration.
+        /// </summary>
+        private readonly IOptions<SecurityGroupSettings> securityGroupOptions;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ResourceController"/> class.
         /// </summary>
         /// <param name="unitOfWork">The instance of unit of work to access repository.</param>
@@ -64,13 +71,15 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="usersService">Instance of user service to get user data.</param>
         /// <param name="resourceMapper">The instance of resource mapper class to work with models.</param>
         /// <param name="memberValidationService">Instance of MemberValidationService to validate member of a security group.</param>
+        /// <param name="securityGroupOptions">Security group configuration settings.</param>
         public ResourceController(
             IUnitOfWork unitOfWork,
             TelemetryClient telemetryClient,
             ILogger<ResourceController> logger,
             IUsersService usersService,
             IResourceMapper resourceMapper,
-            IMemberValidationService memberValidationService)
+            IMemberValidationService memberValidationService,
+            IOptions<SecurityGroupSettings> securityGroupOptions)
            : base(telemetryClient)
         {
             this.unitOfWork = unitOfWork;
@@ -78,6 +87,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
             this.resourceMapper = resourceMapper;
             this.usersService = usersService;
             this.memberValidationService = memberValidationService;
+            this.securityGroupOptions = securityGroupOptions;
         }
 
         /// <summary>
@@ -86,7 +96,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="resourceDetail">Resource fields entered by user.</param>
         /// <returns>Returns success if data is saved successfully.</returns>
         [HttpPost]
-        [Authorize(PolicyNames.MustBeMemberOfSecurityGroupPolicy)]
+        [Authorize(PolicyNames.MustBeTeacherOrAdminPolicy)]
         public async Task<IActionResult> PostAsync(ResourceViewModel resourceDetail)
         {
             try
@@ -112,8 +122,8 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 // Get userId and user display name.
                 IEnumerable<string> userAADObjectIds = new string[] { this.UserObjectId.ToString() };
-                var userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
-                var resourceViewModel = this.resourceMapper.MapToViewModel(resourceDetails, userDetails.ToList());
+                var idToNameMap = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
+                var resourceViewModel = this.resourceMapper.MapToViewModel(resourceDetails, idToNameMap);
 
                 return this.Ok(resourceViewModel);
             }
@@ -170,7 +180,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="resourceDetail">Resource fields entered by user.</param>
         /// <returns>Returns true for successful operation.</returns>
         [HttpPatch("{id}")]
-        [Authorize(PolicyNames.MustBeMemberOfSecurityGroupPolicy)]
+        [Authorize(PolicyNames.MustBeTeacherOrAdminPolicy)]
         public async Task<IActionResult> PatchAsync(Guid id, ResourceViewModel resourceDetail)
         {
             try
@@ -204,7 +214,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 if (existingResourceDetails.CreatedBy != this.UserObjectId)
                 {
-                    var isAdmin = await this.memberValidationService.ValidateAdminAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString());
+                    var isAdmin = await this.memberValidationService.ValidateMemberAsync(this.UserObjectId.ToString(), this.securityGroupOptions.Value.AdminGroupId, this.Request.Headers["Authorization"].ToString());
                     if (!isAdmin)
                     {
                         this.logger.LogError(StatusCodes.Status401Unauthorized, $"The current user who is trying to update resource detail have not created resource or not a part of administrator group for resource id: {id} ");
@@ -244,7 +254,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 // Get userId and user display name.
                 IEnumerable<string> userAADObjectIds = new string[] { resourceDetail.CreatedBy.ToString() };
 
-                var userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
+                var idToNameMap = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
                 var resourceVotes = await this.GetResourceVotesAsync(resourceDetail.Id);
                 var resourcedata = await this.unitOfWork.ResourceRepository.GetAsync(updatedResourceDetails.Id);
 
@@ -252,7 +262,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                     resourcedata,
                     this.UserObjectId,
                     resourceVotes,
-                    userDetails);
+                    idToNameMap);
                 this.RecordEvent("Resource - HTTP patch call is succeeded.", RequestType.Succeeded);
                 this.logger.LogInformation("Resource - HTTP patch call is succeeded.");
 
@@ -272,7 +282,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="id">Holds resource detail resource id.</param>
         /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
         [HttpDelete("{id}")]
-        [Authorize(PolicyNames.MustBeMemberOfSecurityGroupPolicy)]
+        [Authorize(PolicyNames.MustBeTeacherOrAdminPolicy)]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
             this.RecordEvent("Resource - HTTP Delete call initiated.", RequestType.Initiated);
@@ -298,7 +308,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 if (resourceRequestsData.CreatedBy != this.UserObjectId)
                 {
-                    var isAdmin = await this.memberValidationService.ValidateAdminAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString());
+                    var isAdmin = await this.memberValidationService.ValidateMemberAsync(this.UserObjectId.ToString(), this.securityGroupOptions.Value.AdminGroupId, this.Request.Headers["Authorization"].ToString());
                     if (!isAdmin)
                     {
                         this.logger.LogError(StatusCodes.Status401Unauthorized, $"The current user who is trying to delete resource detail have not created resource or not a part of administrator group for resource id: {id} ");
@@ -480,18 +490,17 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 // Get userId and user display name.
                 var createdByObjectIds = resources.Select(resource => resource.CreatedBy).Distinct().Select(userObjectId => userObjectId.ToString());
-
-                IEnumerable<UserDetail> userDetails = new List<UserDetail>();
+                Dictionary<Guid, string> idToNameMap = new Dictionary<Guid, string>();
                 if (createdByObjectIds.Any())
                 {
-                    userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), createdByObjectIds);
+                    idToNameMap = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), createdByObjectIds);
                 }
 
                 var resourcesWithVote = this.unitOfWork.ResourceRepository.GetResourcesWithVotes(resources);
                 var resourceDetails = this.resourceMapper.MapToViewModels(
                     resourcesWithVote,
                     this.UserObjectId,
-                    userDetails.ToList());
+                    idToNameMap);
 
                 this.logger.LogInformation($"Resources search- HTTP Post call succeeded.");
                 this.RecordEvent("Resource search- HTTP Post call succeeded.", RequestType.Succeeded);
@@ -521,8 +530,8 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 var resourceAuthourIds = await this.unitOfWork.ResourceRepository.GetCreatedByObjectIdsAsync(recordCount);
 
-                var creatorDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), resourceAuthourIds.Select(userId => userId.ToString()));
-
+                var usernames = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), resourceAuthourIds.Select(userId => userId.ToString()));
+                var creatorDetails = usernames.Select(k => new UserDetail() { UserId = k.Key, DisplayName = k.Value });
                 this.logger.LogInformation($"GetUniqueUserNamesAsync resource- HTTP Get call succeeded for userId: {this.UserObjectId}.");
                 this.RecordEvent("GetUniqueUserNamesAsync resource- HTTP Get call succeeded", RequestType.Succeeded);
                 return this.Ok(creatorDetails);

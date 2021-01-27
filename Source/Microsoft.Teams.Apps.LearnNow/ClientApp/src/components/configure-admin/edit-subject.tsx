@@ -167,9 +167,6 @@ class EditSubject extends React.Component<WithTranslation, IEditSubjectState> {
                             <Flex gap="gap.small">
                                 <Text content={this.localize("adminCreateSubjectLabelText")} size="medium" />
                             </Flex>
-                            <Flex.Item push>
-                                {this.getErrorMessage(this.state.isSubjectTitleExists, false)}
-                            </Flex.Item>
                         </div>
                         <div className="add-form-input">
                             <Input placeholder={this.localize("adminTextInputSubjectPlaceholder")} fluid required maxLength={200} value={this.state.subjectName} onChange={this.onSubjectValueChange} />

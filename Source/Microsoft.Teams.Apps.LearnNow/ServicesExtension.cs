@@ -30,7 +30,6 @@ namespace Microsoft.Teams.Apps.LearnNow
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Authentication;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.GroupMembers;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Users;
-    using Microsoft.Teams.Apps.LearnNow.Services.Teams.TeamMembers;
 
     /// <summary>
     /// Class which helps to extend ServiceCollection.
@@ -82,6 +81,7 @@ namespace Microsoft.Teams.Apps.LearnNow
             {
                 options.TeacherSecurityGroupId = configuration.GetValue<string>("SecurityGroup:TeacherSecurityGroupId");
                 options.AdminGroupId = configuration.GetValue<string>("SecurityGroup:AdminSecurityGroupId");
+                options.ModeratorGroupId = configuration.GetValue<string>("SecurityGroup:ModeratorsGroupId");
             });
         }
 
@@ -142,8 +142,6 @@ namespace Microsoft.Teams.Apps.LearnNow
             services.AddTransient<IImageProviderService, BingImageService>();
             services
                .AddSingleton<TokenAcquisitionHelper>();
-            services
-                .AddSingleton<ITeamMembersService, TeamMembersService>();
             services
                 .AddTransient<IMessagingExtensionHelper, MessagingExtensionHelper>();
             services

@@ -154,6 +154,13 @@
     width: 100% !important;
 }
 
+.file-attachment-width .ui-attachment__header
+{
+    overflow: hidden;
+    text-overflow:ellipsis;
+    max-width: 25rem;
+}
+
 .file-attachment-width-preview {
     width: 100% !important;
     overflow-wrap: anywhere;
@@ -241,6 +248,8 @@
     padding-right: 2.5rem;
 }
 
+
+
 @media (min-height: 90vh) {
     .preview-content-main {
         max-height: 83vh !important;
@@ -269,7 +278,7 @@
     }
 
     .tab-footer {
-        width: 91vw !important;
+        width: 85vw !important;
     }
 
     .preview-card-image {
@@ -277,13 +286,17 @@
         height: 21.3rem !important;
     }
 
-
-
     .attachment-text-overflow .ui-attachment__header {
         text-overflow: ellipsis;
         max-width: 10rem;
         overflow: hidden;
         white-space: nowrap;
+    }
+
+    .file-attachment-width .ui-attachment__header {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 6rem;
     }
 
     .file-attachment-width-preview {

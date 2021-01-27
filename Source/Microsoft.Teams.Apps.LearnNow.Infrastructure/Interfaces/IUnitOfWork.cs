@@ -5,7 +5,6 @@
 namespace Microsoft.Teams.Apps.LearnNow.Infrastructure
 {
     using System.Threading.Tasks;
-    using Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories;
 
     /// <summary>
     /// Interface for handling operations related to different entity collection.

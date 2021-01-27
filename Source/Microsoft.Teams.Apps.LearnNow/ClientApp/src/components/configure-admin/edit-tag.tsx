@@ -167,9 +167,6 @@ class EditTag extends React.Component<WithTranslation, IEditTagState> {
                             <Flex gap="gap.small">
                                 <Text content={this.localize("adminCreateTagLabelText")} size="medium" />
                             </Flex>
-                            <Flex.Item push>
-                                {this.getErrorMessage(this.state.isTagTitleExists, false)}
-                            </Flex.Item>
                         </div>
                         <div className="add-form-input">
                             <Input placeholder={this.localize("adminTextInputTagPlaceholder")} fluid required maxLength={200} value={this.state.tagName} onChange={this.onTagValueChange} />

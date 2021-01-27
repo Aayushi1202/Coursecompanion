@@ -19,6 +19,12 @@ namespace Microsoft.Teams.Apps.LearnNow.Authentication.AuthenticationPolicy
         /// The name of the authorization policy, MustBeTeamMemberUserPolicy.
         /// Indicates that user is a part of team and has permission to edit created project.
         /// </summary>
-        public const string MustBeMemberOfSecurityGroupPolicy = "MustBeMemberOfSecurityGroupPolicy";
+        public const string MustBeTeacherOrAdminPolicy = "MustBeTeacherOrAdminPolicy";
+
+        /// <summary>
+        /// The name of the authorization policy, MustBeModeratorPolicy.
+        /// Indicates that user is a part of moderator team and has permission to manage grade, subject and tags.
+        /// </summary>
+        public const string MustBeModeratorPolicy = "MustBeModeratorPolicy";
     }
 }

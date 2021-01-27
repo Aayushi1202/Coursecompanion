@@ -199,17 +199,17 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 // Post userId and user display name.
                 var userAADObjectIds = resources.Select(resource => resource.CreatedBy).Distinct().Select(userObjectId => userObjectId.ToString());
 
-                IEnumerable<UserDetail> userDetails = new List<UserDetail>();
+                Dictionary<Guid, string> idToNameMap = new Dictionary<Guid, string>();
                 if (userAADObjectIds.Any())
                 {
-                    userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
+                    idToNameMap = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
                 }
 
                 var resourcesWithVote = this.unitOfWork.ResourceRepository.GetResourcesWithVotes(resources);
                 var resourceDetails = this.resourceMapper.MapToViewModels(
                     resourcesWithVote,
                     this.UserObjectId,
-                    userDetails.ToList());
+                    idToNameMap);
 
                 this.logger.LogInformation("User Resources search- HTTP Post call succeeded.");
                 this.RecordEvent("User Resource search- HTTP Post call succeeded.", RequestType.Succeeded);

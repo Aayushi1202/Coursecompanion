@@ -14,3 +14,11 @@ export const getUserRole = async (handleAuthFailure: (error: string) => void): P
     let url = '/api/groupmember';
     return await axios.get(url, handleAuthFailure);
 }
+
+/**
+* Validate if user is a member of moderator security group.
+*/
+export const validateIfUserIsModerator = async (): Promise<AxiosResponse<Boolean>> => {
+    let url = '/api/groupmember/moderator';
+    return await axios.get(url);
+}

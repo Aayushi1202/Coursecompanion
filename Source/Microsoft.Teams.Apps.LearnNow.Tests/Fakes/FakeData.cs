@@ -121,15 +121,21 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Fakes
         /// <returns>Tag collection</returns>
         public static IEnumerable<ResourceVote> GetResourceVotes()
         {
-            var resourceVotes = new List<ResourceVote>();
-            var resourceVote = new ResourceVote()
+            IEnumerable<ResourceVote> resourceVotes = new List<ResourceVote>()
             {
-                Id = Guid.Parse(UserID),
-                ResourceId = Guid.Parse(Id),
-                UserId = Guid.Parse(UserID),
+                new ResourceVote()
+                {
+                    Id = Guid.NewGuid(),
+                    ResourceId = FakeData.GetResource().Id,
+                    UserId = Guid.Parse(UserID),
+                },
+                new ResourceVote()
+                {
+                    Id = Guid.NewGuid(),
+                    ResourceId = FakeData.GetResource().Id,
+                    UserId = Guid.NewGuid(),
+                },
             };
-
-            resourceVotes.Add(resourceVote);
 
             return resourceVotes;
         }
@@ -180,7 +186,33 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Fakes
             {
                 Id = Guid.Parse(Id),
                 Title = "test",
-                CreatedBy = Guid.NewGuid(),
+                CreatedBy = Guid.Parse(UserID),
+                ResourceTag = resourceTags,
+                GradeId = Guid.Parse(Id),
+                SubjectId = Guid.Parse(Id),
+            };
+
+            return resource;
+        }
+
+        /// <summary>
+        /// Make fake Resource data for non-administrator user unit testing.
+        /// </summary>
+        /// <returns>Tag collection</returns>
+        public static ResourceViewModel GetPayLoadResource()
+        {
+            var resourceTags = new List<ResourceTag>();
+            var resourceTag = new ResourceTag()
+            {
+                TagId = Guid.Parse(Id),
+                ResourceId = Guid.Parse(Id),
+            };
+            resourceTags.Add(resourceTag);
+            var resource = new ResourceViewModel()
+            {
+                Id = Guid.Parse(Id),
+                Title = "test",
+                CreatedBy = Guid.Parse(UserID),
                 ResourceTag = resourceTags,
                 GradeId = Guid.Parse(Id),
                 SubjectId = Guid.Parse(Id),
@@ -233,7 +265,31 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Fakes
             {
                 Id = Guid.Parse(Id),
                 Title = "test",
-                CreatedBy = Guid.NewGuid(),
+                CreatedBy = Guid.Parse(UserID),
+                LearningModuleTag = resourceTags,
+            };
+
+            return learningModule;
+        }
+
+        /// <summary>
+        /// Make fake LearningModule data for different user.
+        /// </summary>
+        /// <returns>Tag collection</returns>
+        public static LearningModuleViewModel GetPayLoadLearningModule()
+        {
+            var resourceTags = new List<LearningModuleTag>();
+            var resourceTag = new LearningModuleTag()
+            {
+                TagId = Guid.Parse(Id),
+                LearningModuleId = Guid.Parse(Id),
+            };
+            resourceTags.Add(resourceTag);
+            var learningModule = new LearningModuleViewModel()
+            {
+                Id = Guid.Parse(Id),
+                Title = "test",
+                CreatedBy = Guid.Parse(UserID),
                 LearningModuleTag = resourceTags,
             };
 
@@ -293,18 +349,13 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Fakes
         /// Make fake Resource data for unit testing.
         /// </summary>
         /// <returns>Tag collection</returns>
-        public static IEnumerable<UserDetail> GetUserDetails()
+        public static Dictionary<Guid, string> GetUserDetails()
         {
-            var users = new List<UserDetail>();
-            var user = new UserDetail()
+            Dictionary<Guid, string> idToNameMap = new Dictionary<Guid, string>
             {
-                UserId = Guid.Parse(UserID),
-                DisplayName = "Test user",
+                { Guid.Parse(UserID), "Test user" },
             };
-
-            users.Add(user);
-
-            return users;
+            return idToNameMap;
         }
     }
 }

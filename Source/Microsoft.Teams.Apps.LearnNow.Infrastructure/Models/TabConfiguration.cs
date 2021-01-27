@@ -17,6 +17,11 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Models
         public Guid Id { get; set; }
 
         /// <summary>
+        /// Gets or sets group id of team where tab is configured.
+        /// </summary>
+        public string GroupId { get; set; }
+
+        /// <summary>
         /// Gets or sets team id of tab configuration entity model.
         /// </summary>
         public string TeamId { get; set; }

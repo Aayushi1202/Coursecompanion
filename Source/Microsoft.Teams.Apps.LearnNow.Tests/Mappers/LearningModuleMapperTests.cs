@@ -5,10 +5,12 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Mappers
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure.Models;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories;
     using Microsoft.Teams.Apps.LearnNow.ModelMappers;
     using Microsoft.Teams.Apps.LearnNow.Models;
+    using Microsoft.Teams.Apps.LearnNow.Tests.Fakes;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Moq;
 
@@ -32,8 +34,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Mappers
         public void TestInitialize()
         {
             this.learnNowDbContext = new Mock<LearnNowContext>();
-            this.learningModuleMapper = new LearningModuleMapper(
-                this.learnNowDbContext.Object);
+            this.learningModuleMapper = new LearningModuleMapper();
             var moduleTagss = new List<LearningModuleTag>();
             var moduleTag = new LearningModuleTag()
             {
@@ -100,20 +101,14 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Mappers
         [TestMethod]
         public void CanGetMapToViewModel()
         {
-            //// ARRANGE
-            var learningModuleId = Guid.NewGuid();
-            this.learningModule.Id = learningModuleId;
-            var userDetail = new UserDetail
-            {
-                UserId = this.learningModule.UpdatedBy,
-                DisplayName = "User2",
-            };
-            this.userDetails.Add(userDetail);
             //// ACT
-            var result = this.learningModuleMapper.MapToViewModel(this.learningModule, this.userDetails);
+            var result = this.learningModuleMapper.MapToViewModel(FakeData.GetLearningModules().First(), FakeData.GetUserDetails());
 
             //// ASSERT
-            Assert.AreEqual(result.Id, learningModuleId);
+            Assert.AreEqual(FakeData.GetLearningModules().First().Id, result.Id);
+            Assert.AreEqual(FakeData.GetLearningModules().First().Title, result.Title);
+            Assert.AreEqual(FakeData.GetLearningModules().First().CreatedBy, result.CreatedBy);
+            Assert.AreEqual(FakeData.GetUserDetails().First().Value, result.UserDisplayName);
         }
 
         /// <summary>
@@ -156,10 +151,13 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Mappers
             };
             this.userDetails.Add(userDetail);
             //// ACT
-            var result = this.learningModuleMapper.PatchAndMapToViewModel(this.learningModule, userAadObjectId, learningModuleVotes, 2, this.userDetails);
+            var result = this.learningModuleMapper.PatchAndMapToViewModel(FakeData.GetLearningModule(), Guid.Parse(FakeData.UserID), learningModuleVotes, 2, FakeData.GetUserDetails());
 
             //// ASSERT
-            Assert.AreEqual(result.CreatedBy, learningModuleCreatedBy);
+            Assert.AreEqual(FakeData.GetLearningModules().First().Id, result.Id);
+            Assert.AreEqual(FakeData.GetLearningModules().First().Title, result.Title);
+            Assert.AreEqual(FakeData.GetLearningModules().First().CreatedBy, result.CreatedBy);
+            Assert.AreEqual(FakeData.GetUserDetails().First().Value, result.UserDisplayName);
         }
     }
 }

@@ -18,5 +18,10 @@ namespace Microsoft.Teams.Apps.LearnNow.Models.Configuration
         /// Gets or sets group id of administrators security group.
         /// </summary>
         public string AdminGroupId { get; set; }
+
+        /// <summary>
+        /// Gets or sets groupd id of moderator group.
+        /// </summary>
+        public string ModeratorGroupId { get; set; }
     }
 }

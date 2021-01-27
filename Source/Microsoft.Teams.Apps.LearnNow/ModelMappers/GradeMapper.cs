@@ -41,11 +41,11 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// Gets grade view model from entity model.
         /// </summary>
         /// <param name="grades">Collection of grade entity model objects.</param>
-        /// <param name="userDetails">Collection of user detail objects.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns collection of grade view model objects.</returns>
         public IEnumerable<GradeViewModel> MapToViewModel(
             IEnumerable<Grade> grades,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             grades = grades ?? throw new ArgumentNullException(nameof(grades));
 
@@ -54,7 +54,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 Id = grade.Id,
                 GradeName = grade.GradeName,
                 UpdatedOn = grade.UpdatedOn,
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == grade.CreatedBy).DisplayName,
+                UserDisplayName = idToNameMap[grade.CreatedBy],
             });
         }
     }

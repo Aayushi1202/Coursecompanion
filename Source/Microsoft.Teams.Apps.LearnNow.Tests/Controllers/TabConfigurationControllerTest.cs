@@ -5,6 +5,8 @@
 namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
 {
     using System;
+    using System.Collections.Generic;
+    using System.Linq.Expressions;
     using System.Threading.Tasks;
     using Microsoft.ApplicationInsights;
     using Microsoft.ApplicationInsights.Extensibility;
@@ -66,18 +68,20 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                 ChannelId = "channel 1",
                 LearningModuleId = Guid.NewGuid(),
             };
+
             var tabConfigurationEntity = new TabConfiguration
             {
-                Id = Guid.NewGuid(),
                 TeamId = tabConfigurationDetail.TeamId,
                 ChannelId = tabConfigurationDetail.ChannelId,
                 LearningModuleId = tabConfigurationDetail.LearningModuleId,
             };
 
+            var groupId = Guid.NewGuid().ToString();
+
             this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.Add(It.IsAny<TabConfiguration>())).Returns(tabConfigurationEntity);
 
             // ACT
-            var result = (ObjectResult)await this.tabConfigurationController.PostAsync(tabConfigurationDetail);
+            var result = (ObjectResult)await this.tabConfigurationController.PostAsync(groupId, tabConfigurationDetail);
             var resultValue = (TabConfiguration)result.Value;
 
             // ASSERT
@@ -95,23 +99,26 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
         public async Task GetAsync_TabConfigurationExistsForId_ReturnsOkResult()
         {
             // ARRANGE
-            var tabConfigurationEntity = new TabConfiguration
+            var tabConfigurationEntities = new List<TabConfiguration>();
+            tabConfigurationEntities.Add(new TabConfiguration
             {
                 TeamId = "team 1",
                 ChannelId = "channel 1",
                 LearningModuleId = Guid.NewGuid(),
-            };
-            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(tabConfigurationEntity);
+            });
+
+            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.FindAsync(It.IsAny<Expression<Func<TabConfiguration, bool>>>()))
+                .ReturnsAsync(tabConfigurationEntities);
 
             // ACT
-            var result = (ObjectResult)await this.tabConfigurationController.GetAsync(Guid.NewGuid());
+            var result = (ObjectResult)await this.tabConfigurationController.GetAsync(Guid.NewGuid().ToString(), Guid.NewGuid());
             var resultValue = (TabConfiguration)result.Value;
 
             // ASSERT
             Assert.AreEqual(result.StatusCode, StatusCodes.Status200OK);
-            Assert.AreEqual(resultValue.TeamId, tabConfigurationEntity.TeamId);
-            Assert.AreEqual(resultValue.ChannelId, tabConfigurationEntity.ChannelId);
-            Assert.AreEqual(resultValue.LearningModuleId, tabConfigurationEntity.LearningModuleId);
+            Assert.AreEqual(resultValue.TeamId, tabConfigurationEntities[0].TeamId);
+            Assert.AreEqual(resultValue.ChannelId, tabConfigurationEntities[0].ChannelId);
+            Assert.AreEqual(resultValue.LearningModuleId, tabConfigurationEntities[0].LearningModuleId);
         }
 
         /// <summary>
@@ -122,10 +129,12 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
         public async Task GetAsync_RecordNotexistForGivenTabId_ReturnsNotFound()
         {
             // ARRANGE
-            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(() => null);
+            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository
+            .FindAsync(It.IsAny<Expression<Func<TabConfiguration, bool>>>()))
+            .ReturnsAsync(() => null);
 
             // ACT
-            var result = (ObjectResult)await this.tabConfigurationController.GetAsync(Guid.NewGuid());
+            var result = (ObjectResult)await this.tabConfigurationController.GetAsync(Guid.NewGuid().ToString(), Guid.NewGuid());
 
             // ASSERT
             Assert.AreEqual(result.StatusCode, StatusCodes.Status404NotFound);
@@ -146,16 +155,23 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                 ChannelId = "channel 1",
                 LearningModuleId = Guid.NewGuid(),
             };
-            var tabConfigurationEntity = new TabConfiguration
+
+            var tabConfigurationEntities = new List<TabConfiguration>();
+            tabConfigurationEntities.Add(new TabConfiguration
             {
-                Id = tabConfigurationDetail.Id,
-                LearningModuleId = tabConfigurationDetail.LearningModuleId,
-            };
-            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(tabConfigurationEntity);
-            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.Update(It.IsAny<TabConfiguration>())).Returns(tabConfigurationEntity);
+                TeamId = "team 1",
+                ChannelId = "channel 1",
+                LearningModuleId = Guid.NewGuid(),
+            });
+
+            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository
+            .FindAsync(It.IsAny<Expression<Func<TabConfiguration, bool>>>()))
+            .ReturnsAsync(() => tabConfigurationEntities);
+
+            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.Update(It.IsAny<TabConfiguration>())).Returns(tabConfigurationEntities[0]);
 
             // ACT
-            var result = (ObjectResult)await this.tabConfigurationController.PatchAsync(id, tabConfigurationDetail);
+            var result = (ObjectResult)await this.tabConfigurationController.PatchAsync(Guid.NewGuid().ToString(), id, tabConfigurationDetail);
             var resultValue = (TabConfiguration)result.Value;
 
             // ASSERT
@@ -178,7 +194,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
             };
 
             // ACT
-            var result = (ObjectResult)await this.tabConfigurationController.PatchAsync(Guid.Empty, tabConfigurationDetail);
+            var result = (ObjectResult)await this.tabConfigurationController.PatchAsync(Guid.NewGuid().ToString(), Guid.Empty, tabConfigurationDetail);
 
             // ASSERT
             Assert.AreEqual(result.StatusCode, StatusCodes.Status400BadRequest);
@@ -199,10 +215,12 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                 LearningModuleId = Guid.NewGuid(),
                 Id = Guid.NewGuid(),
             };
-            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(() => null);
+
+            this.unitOfWork.Setup(uow => uow.TabConfigurationRepository.FindAsync(It.IsAny<Expression<Func<TabConfiguration, bool>>>()))
+                .ReturnsAsync(() => null);
 
             // ACT
-            var result = (ObjectResult)await this.tabConfigurationController.PatchAsync(tabConfigurationDetail.Id, tabConfigurationDetail);
+            var result = (ObjectResult)await this.tabConfigurationController.PatchAsync(Guid.NewGuid().ToString(), tabConfigurationDetail.Id, tabConfigurationDetail);
 
             // ASSERT
             Assert.AreEqual(result.StatusCode, StatusCodes.Status404NotFound);

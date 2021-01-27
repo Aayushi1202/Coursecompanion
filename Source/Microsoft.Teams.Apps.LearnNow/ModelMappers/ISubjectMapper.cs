@@ -28,10 +28,10 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// Gets subject view model from entity model.
         /// </summary>
         /// <param name="subjects">Collection of subject entity model objects.</param>
-        /// <param name="userDetails">Collection of user detail objects.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns collection of subject view model objects.</returns>
         public IEnumerable<SubjectViewModel> MapToViewModel(
             IEnumerable<Subject> subjects,
-            IEnumerable<UserDetail> userDetails);
+            Dictionary<Guid, string> idToNameMap);
     }
 }

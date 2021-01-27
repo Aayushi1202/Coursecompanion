@@ -14,11 +14,13 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.LearnNow.Controllers;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure.Models;
     using Microsoft.Teams.Apps.LearnNow.ModelMappers;
     using Microsoft.Teams.Apps.LearnNow.Models;
+    using Microsoft.Teams.Apps.LearnNow.Models.Configuration;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Authentication;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.GroupMembers;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Users;
@@ -40,6 +42,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
         private Mock<IUsersService> usersServiceMock;
         private ITokenHelper accessTokenHelper;
         private Mock<IMemberValidationService> memberValidationService;
+        private IOptions<SecurityGroupSettings> securityGroupOptions;
 
         /// <summary>
         ///  Initialize all test variables.
@@ -54,6 +57,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
             this.usersServiceMock = new Mock<IUsersService>();
             this.memberValidationService = new Mock<IMemberValidationService>();
             this.accessTokenHelper = new FakeAccessTokenHelper();
+            this.securityGroupOptions = Options.Create(new SecurityGroupSettings());
 
             this.resourceController = new ResourceController(
                 this.unitOfWork.Object,
@@ -61,7 +65,8 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                 this.logger.Object,
                 this.usersServiceMock.Object,
                 this.resourceMapper.Object,
-                this.memberValidationService.Object)
+                this.memberValidationService.Object,
+                this.securityGroupOptions)
             {
                 ControllerContext = new ControllerContext(),
             };
@@ -78,15 +83,17 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
         public async Task GetResourceDetailAsync_ResourceExistsForId_ReturnsOkResult()
         {
             var resourceId = Guid.Parse(FakeData.Id);
+            this.unitOfWork.Setup(uow => uow.ResourceVoteRepository.FindAsync(It.IsAny<Expression<Func<ResourceVote, bool>>>())).ReturnsAsync(FakeData.GetResourceVotes());
+            this.resourceMapper.Setup(resourceMapper => resourceMapper.MapToViewModel(It.IsAny<Resource>(), It.IsAny<Guid>(), It.IsAny<IEnumerable<ResourceVote>>())).Returns(FakeData.GetPayLoadResource);
             this.unitOfWork.Setup(uow => uow.ResourceRepository.GetAsync(It.IsAny<Guid>())).Returns(Task.FromResult(FakeData.GetResources().FirstOrDefault()));
 
             // ACT
             var result = (ObjectResult)await this.resourceController.GetResourceDetailAsync(resourceId);
-            var resultValue = (Resource)result.Value;
+            var resultValue = (ResourceViewModel)result.Value;
 
             // ASSERT
             Assert.AreEqual(result.StatusCode, StatusCodes.Status200OK);
-            Assert.AreEqual(resultValue.Title, FakeData.GetResources().FirstOrDefault().Title);
+            Assert.AreEqual(resultValue.Title, FakeData.GetPayLoadResource().Title);
         }
 
         /// <summary>
@@ -106,7 +113,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
             };
             this.resourceMapper.Setup(resourceMapper => resourceMapper.MapToDTO(It.IsAny<ResourceViewModel>(), It.IsAny<Guid>())).Returns(FakeData.GetResources().FirstOrDefault());
             this.unitOfWork.Setup(uow => uow.ResourceRepository.Add(It.IsAny<Resource>())).Returns(FakeData.GetResources().FirstOrDefault());
-            this.resourceMapper.Setup(resourceMapper => resourceMapper.MapToViewModel(It.IsAny<Resource>(), It.IsAny<IEnumerable<UserDetail>>())).Returns(resourceModel);
+            this.resourceMapper.Setup(resourceMapper => resourceMapper.MapToViewModel(It.IsAny<Resource>(), It.IsAny<Dictionary<Guid, string>>())).Returns(resourceModel);
 
             // ACT
             var result = (ObjectResult)await this.resourceController.PostAsync(resourceModel);
@@ -146,7 +153,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
             this.unitOfWork.Setup(uow => uow.ResourceVoteRepository.FindAsync(It.IsAny<Expression<Func<ResourceVote, bool>>>())).ReturnsAsync(FakeData.GetResourceVotes());
             this.resourceMapper.Setup(resourceMapper => resourceMapper.PatchAndMapToDTO(It.IsAny<ResourceViewModel>(), It.IsAny<Guid>())).Returns(FakeData.GetResources().FirstOrDefault());
             this.unitOfWork.Setup(uow => uow.ResourceRepository.Update(It.IsAny<Resource>())).Returns(FakeData.GetResources().FirstOrDefault());
-            this.resourceMapper.Setup(resourceMapper => resourceMapper.PatchAndMapToViewModel(It.IsAny<Resource>(), It.IsAny<Guid>(), It.IsAny<IEnumerable<ResourceVote>>(), It.IsAny<IEnumerable<UserDetail>>())).Returns(resourceModel);
+            this.resourceMapper.Setup(resourceMapper => resourceMapper.PatchAndMapToViewModel(It.IsAny<Resource>(), It.IsAny<Guid>(), It.IsAny<IEnumerable<ResourceVote>>(), It.IsAny<Dictionary<Guid, string>>())).Returns(resourceModel);
 
             // ACT
             var result = (ObjectResult)await this.resourceController.PatchAsync(Guid.Parse(FakeData.Id), resourceModel);
@@ -326,8 +333,12 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                 ResourceType = 1,
                 ResourceTag = resourceTagss,
             };
-            this.unitOfWork.Setup(uow => uow.ResourceRepository.GetAsync(It.IsAny<Guid>())).Returns(Task.FromResult(FakeData.GetResource()));
-            this.memberValidationService.Setup(validationService => validationService.ValidateAdminAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+            var resource = FakeData.GetResource();
+            resource.CreatedBy = Guid.NewGuid();
+
+            this.unitOfWork.Setup(uow => uow.ResourceRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(resource);
+            this.memberValidationService.Setup(validationService => validationService.ValidateMemberAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+            this.securityGroupOptions.Value.AdminGroupId = Guid.NewGuid().ToString();
 
             // ACT
             var result = (ObjectResult)await this.resourceController.PatchAsync(Guid.Parse(FakeData.Id), resourceModel);
@@ -345,8 +356,12 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
         public async Task DeleteAsync_ResourceDeleteWithNonAdminUser_ReturnsUnauthorizedResult()
         {
             // ARRANGE
-            this.unitOfWork.Setup(uow => uow.ResourceRepository.GetAsync(It.IsAny<Guid>())).Returns(Task.FromResult(FakeData.GetResource()));
-            this.memberValidationService.Setup(validationService => validationService.ValidateAdminAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+            var resource = FakeData.GetResource();
+            resource.CreatedBy = Guid.NewGuid();
+
+            this.unitOfWork.Setup(uow => uow.ResourceRepository.GetAsync(It.IsAny<Guid>())).ReturnsAsync(resource);
+            this.memberValidationService.Setup(validationService => validationService.ValidateMemberAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+            this.securityGroupOptions.Value.AdminGroupId = Guid.NewGuid().ToString();
 
             // ACT
             var result = (ObjectResult)await this.resourceController.DeleteAsync(Guid.Parse(FakeData.Id));

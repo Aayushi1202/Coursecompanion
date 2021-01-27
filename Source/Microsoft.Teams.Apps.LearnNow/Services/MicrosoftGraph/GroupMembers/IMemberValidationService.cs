@@ -12,19 +12,12 @@ namespace Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.GroupMembers
     public interface IMemberValidationService
     {
         /// <summary>
-        /// Method to validate whether current user is a member of teacher's security group.
+        /// Method to validate whether current user is a valid member of provided group.
         /// </summary>
         /// <param name="userAadObjectId">Azure Active Directory id of current user.</param>
+        /// <param name="groupId">Group id on which passed user object needs to be validated.</param>
         /// <param name="authorizationHeaders">HttpRequest authorization headers.</param>
-        /// <returns>Returns true if current user is a member of teacher's security group.</returns>
-        Task<bool> ValidateMemberAsync(string userAadObjectId, string authorizationHeaders);
-
-        /// <summary>
-        /// Method to validate whether current user is a member of administrators security group.
-        /// </summary>
-        /// <param name="userAadObjectId">Azure Active Directory id of current user.</param>
-        /// <param name="authorizationHeaders">HttpRequest authorization headers.</param>
-        /// <returns>Returns true if current user is a member of administrators security group.</returns>
-        Task<bool> ValidateAdminAsync(string userAadObjectId, string authorizationHeaders);
+        /// <returns>Returns true if current user is a valid member of provided group.</returns>
+        Task<bool> ValidateMemberAsync(string userAadObjectId, string groupId, string authorizationHeaders);
     }
 }

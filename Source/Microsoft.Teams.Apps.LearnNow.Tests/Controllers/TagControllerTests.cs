@@ -80,7 +80,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Tests.Controllers
                 });
 
             this.unitOfWork.Setup(uow => uow.TagRepository.GetAllAsync()).Returns(Task.FromResult(FakeData.GetTags()));
-            this.tagMapper.Setup(tagMapper => tagMapper.MapToViewModel(It.IsAny<IEnumerable<Tag>>(), It.IsAny<IEnumerable<UserDetail>>())).Returns(tagViewModel);
+            this.tagMapper.Setup(tagMapper => tagMapper.MapToViewModel(It.IsAny<IEnumerable<Tag>>(), It.IsAny<Dictionary<Guid, string>>())).Returns(tagViewModel);
             this.usersServiceMock.Setup(usersService => usersService.GetUserDisplayNamesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync(FakeData.GetUserDetails);
 
             // ACT

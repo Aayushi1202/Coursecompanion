@@ -16,13 +16,6 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
     public class LearningModuleMapper : ILearningModuleMapper
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="LearningModuleMapper"/> class.
-        /// </summary>
-        public LearningModuleMapper()
-        {
-        }
-
-        /// <summary>
         /// Gets  learning module entity model from view model.
         /// </summary>
         /// <param name="learningModuleViewModel"> Learning module view model object.</param>
@@ -54,14 +47,14 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// Gets  learning module view model from entity model.
         /// </summary>
         /// <param name="learningModule"> Learning module entity model object.</param>
-        /// <param name="userDetails">List of user detail object.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns a  learning module view model object.</returns>
         public LearningModuleViewModel MapToViewModel(
             LearningModule learningModule,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             learningModule = learningModule ?? throw new ArgumentNullException(nameof(learningModule));
-            userDetails = userDetails ?? throw new ArgumentNullException(nameof(userDetails));
+            idToNameMap = idToNameMap ?? throw new ArgumentNullException(nameof(idToNameMap));
 
             return new LearningModuleViewModel
             {
@@ -81,7 +74,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 IsLikedByUser = false,
                 VoteCount = 0,
                 ResourceCount = 0,
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == learningModule.CreatedBy).DisplayName,
+                UserDisplayName = idToNameMap[learningModule.CreatedBy],
             };
         }
 
@@ -119,18 +112,18 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// <param name="userAadObjectId">Azure Active Directory id of current logged-in user.</param>
         /// <param name="learningModuleVotes">List of learning module votes.</param>
         /// <param name="resourceCount">Count of learning module resources.</param>
-        /// <param name="userDetails">List of user details object.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns a  learning module view model object.</returns>
         public LearningModuleViewModel PatchAndMapToViewModel(
             LearningModule learningModule,
             Guid userAadObjectId,
             IEnumerable<LearningModuleVote> learningModuleVotes,
             int resourceCount,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             learningModule = learningModule ?? throw new ArgumentNullException(nameof(learningModule));
             learningModuleVotes = learningModuleVotes ?? throw new ArgumentNullException(nameof(learningModuleVotes));
-            userDetails = userDetails ?? throw new ArgumentNullException(nameof(userDetails));
+            idToNameMap = idToNameMap ?? throw new ArgumentNullException(nameof(idToNameMap));
 
             return new LearningModuleViewModel
             {
@@ -150,7 +143,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 IsLikedByUser = learningModuleVotes.Any(vote => vote.UserId == userAadObjectId),
                 VoteCount = learningModuleVotes.Count(),
                 ResourceCount = resourceCount,
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == learningModule.CreatedBy).DisplayName,
+                UserDisplayName = idToNameMap[learningModule.CreatedBy],
             };
         }
 
@@ -159,15 +152,15 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// </summary>
         /// <param name="moduleWithVotesAndResources">Learning module entity object collection.</param>
         /// <param name="userAadObjectId">Azure Active Directory id of current logged-in user.</param>
-        /// <param name="userDetails">List of user details object.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns a collection of learning module view models.</returns>
         public IEnumerable<LearningModuleViewModel> MapToViewModels(
             Dictionary<Guid, List<LearningModuleDetailModel>> moduleWithVotesAndResources,
             Guid userAadObjectId,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             moduleWithVotesAndResources = moduleWithVotesAndResources ?? throw new ArgumentNullException(nameof(moduleWithVotesAndResources));
-            userDetails = userDetails ?? throw new ArgumentNullException(nameof(userDetails));
+            idToNameMap = idToNameMap ?? throw new ArgumentNullException(nameof(idToNameMap));
 
             var learningModuleDetails = new List<LearningModuleViewModel>();
             foreach (var learningModule in moduleWithVotesAndResources)
@@ -190,7 +183,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                     CreatedOn = module.CreatedOn,
                     UpdatedOn = module.UpdatedOn,
                     LearningModuleTag = module.LearningModuleTag,
-                    UserDisplayName = userDetails.ToList().Find(user => user.UserId == (Guid)module.CreatedBy).DisplayName,
+                    UserDisplayName = idToNameMap[(Guid)module.CreatedBy],
                     ResourceCount = (int)module.ResourceModuleMappings.Count(),
                 });
             }

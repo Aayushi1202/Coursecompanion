@@ -521,6 +521,11 @@ namespace Microsoft.Teams.Apps.LearnNow.Infrastructure.Repositories
                     .HasColumnName("teamId")
                     .HasMaxLength(200);
 
+                entity.Property(e => e.GroupId)
+                   .IsRequired()
+                   .HasColumnName("groupId")
+                   .HasMaxLength(200);
+
                 entity.Property(e => e.UpdatedBy).HasColumnName("updatedBy");
 
                 entity.Property(e => e.UpdatedOn)

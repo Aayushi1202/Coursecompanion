@@ -102,9 +102,6 @@ class AddTag extends React.Component<WithTranslation, IAddTagState> {
                             content={this.localize("adminCreateTagLabelText")}
                             size="medium"
                         /> 
-                        <Flex.Item push>
-                            {this.getErrorMessage()}
-                        </Flex.Item>
                     </Flex>
                     <div className="add-form-input">
                         <Input

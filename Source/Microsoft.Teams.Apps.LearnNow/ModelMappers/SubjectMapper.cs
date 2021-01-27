@@ -41,11 +41,11 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// Gets subject view model from entity model.
         /// </summary>
         /// <param name="subjects">Collection of subject entity model objects.</param>
-        /// <param name="userDetails">Collection of user detail objects.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns collection of subject view model objects.</returns>
         public IEnumerable<SubjectViewModel> MapToViewModel(
             IEnumerable<Subject> subjects,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             subjects = subjects ?? throw new ArgumentNullException(nameof(subjects));
 
@@ -54,7 +54,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 Id = subject.Id,
                 SubjectName = subject.SubjectName,
                 UpdatedOn = subject.UpdatedOn,
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == subject.CreatedBy).DisplayName,
+                UserDisplayName = idToNameMap[subject.CreatedBy],
             });
         }
     }

@@ -15,6 +15,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
     using Microsoft.Data.SqlClient;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Teams.Apps.LearnNow.Authentication.AuthenticationPolicy;
     using Microsoft.Teams.Apps.LearnNow.Common;
     using Microsoft.Teams.Apps.LearnNow.Helpers;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure;
@@ -142,6 +143,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="subjectDetail">Holds subject detail entity data.</param>
         /// <returns>Returns true for successful operation.</returns>
         [HttpPost]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> PostAsync([FromBody] SubjectViewModel subjectDetail)
         {
             if (subjectDetail == null)
@@ -191,6 +193,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="subjectDetail">Holds subject detail entity data.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         [HttpPatch("{id}")]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> PatchAsync(Guid id, [FromBody] SubjectViewModel subjectDetail)
         {
             if (subjectDetail == null)
@@ -253,6 +256,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="subjectRequestsData">Holds subject detail entity data.</param>
         /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
         [HttpPost("subjectsdelete")]
+        [Authorize(PolicyNames.MustBeModeratorPolicy)]
         public async Task<IActionResult> DeleteAsync([FromBody] List<AdminConfigBaseModel> subjectRequestsData)
         {
             this.RecordEvent("Subject - HTTP Delete call to delete subjects.", RequestType.Initiated);

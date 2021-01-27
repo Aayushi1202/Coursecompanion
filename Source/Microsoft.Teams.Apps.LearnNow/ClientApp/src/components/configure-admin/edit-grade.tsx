@@ -163,9 +163,6 @@ class EditGrade extends React.Component<WithTranslation, IEditGradeState> {
                         <div>
                             <Flex gap="gap.small">
                                 <Text content={this.localize("adminCreateGradeLabelText")} size="medium" />
-                                <Flex.Item push>
-                                    {this.getErrorMessage(this.state.isGradeTitleExists, false)}
-                                </Flex.Item>
                             </Flex>
                         </div>
                         <div className="add-form-input">

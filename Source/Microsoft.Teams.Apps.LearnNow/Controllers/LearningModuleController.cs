@@ -13,12 +13,14 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.LearnNow.Authentication.AuthenticationPolicy;
     using Microsoft.Teams.Apps.LearnNow.Common;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure;
     using Microsoft.Teams.Apps.LearnNow.Infrastructure.Models;
     using Microsoft.Teams.Apps.LearnNow.ModelMappers;
     using Microsoft.Teams.Apps.LearnNow.Models;
+    using Microsoft.Teams.Apps.LearnNow.Models.Configuration;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.GroupMembers;
     using Microsoft.Teams.Apps.LearnNow.Services.MicrosoftGraph.Users;
 
@@ -66,6 +68,11 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         private readonly IMemberValidationService memberValidationService;
 
         /// <summary>
+        /// Instance of IOptions to read security group data from azure application configuration.
+        /// </summary>
+        private readonly IOptions<SecurityGroupSettings> securityGroupOptions;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="LearningModuleController"/> class.
         /// </summary>
         /// <param name="logger">Logs errors and information.</param>
@@ -76,6 +83,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="resourceModuleMapper">The instance of resource module mapper class to work with models</param>
         /// <param name="resourceMapper">The instance of resource mapper class to work with models.</param>
         /// <param name="memberValidationService">Instance of MemberValidationService to validate member of a security group.</param>
+        /// <param name="securityGroupOptions">Security group configuration settings.</param>
         public LearningModuleController(
             ILogger<LearningModuleController> logger,
             TelemetryClient telemetryClient,
@@ -84,7 +92,8 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
             ILearningModuleMapper learningModuleMapper,
             IResourceModuleMapper resourceModuleMapper,
             IResourceMapper resourceMapper,
-            IMemberValidationService memberValidationService)
+            IMemberValidationService memberValidationService,
+            IOptions<SecurityGroupSettings> securityGroupOptions)
            : base(telemetryClient)
         {
             this.logger = logger;
@@ -94,6 +103,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
             this.resourceModuleMapper = resourceModuleMapper;
             this.resourceMapper = resourceMapper;
             this.memberValidationService = memberValidationService;
+            this.securityGroupOptions = securityGroupOptions;
         }
 
         /// <summary>
@@ -127,16 +137,16 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 // Get userId and user display name.
                 var createdByObjectIds = learningModules.Select(module => module.CreatedBy).Distinct().Select(userObjectId => userObjectId.ToString());
-                IEnumerable<UserDetail> userDetails = new List<UserDetail>();
+                Dictionary<Guid, string> idToNameMap = new Dictionary<Guid, string>();
                 if (createdByObjectIds.Any())
                 {
-                    userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), createdByObjectIds);
+                    idToNameMap = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), createdByObjectIds);
                 }
 
                 var learningModuleDetails = this.learningModuleMapper.MapToViewModels(
                     moduleWithVotesAndResources,
                     this.UserObjectId,
-                    userDetails.ToList());
+                    idToNameMap);
 
                 this.logger.LogInformation("Learning module search- HTTP Post Call succeeded.");
                 this.RecordEvent("Learning module search- HTTP Post call succeeded.", RequestType.Succeeded);
@@ -157,7 +167,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="learningModuleDetail">Learning module fields entered by user.</param>
         /// <returns>Returns a learning module object..</returns>
         [HttpPost]
-        [Authorize(PolicyNames.MustBeMemberOfSecurityGroupPolicy)]
+        [Authorize(PolicyNames.MustBeTeacherOrAdminPolicy)]
         public async Task<IActionResult> PostAsync(LearningModuleViewModel learningModuleDetail)
         {
             this.RecordEvent("Learning module - HTTP Post call initiated.", RequestType.Initiated);
@@ -180,10 +190,9 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 // Get userId and user display name.
                 IEnumerable<string> userAADObjectIds = new string[] { this.UserObjectId.ToString() };
-                IEnumerable<UserDetail> userDetails = new List<UserDetail>();
-                userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
+                var idToNameMap = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
 
-                var learningModuleViewModel = this.learningModuleMapper.MapToViewModel(learningModuleDetails, userDetails.ToList());
+                var learningModuleViewModel = this.learningModuleMapper.MapToViewModel(learningModuleDetails, idToNameMap);
                 this.RecordEvent("Learning module - HTTP Post call succeeded.", RequestType.Succeeded);
 
                 return this.Ok(learningModuleViewModel);
@@ -203,7 +212,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="moduleResourceDetails">Learning module details.</param>
         /// <returns>Returns a learning module object.</returns>
         [HttpPatch("{id}")]
-        [Authorize(PolicyNames.MustBeMemberOfSecurityGroupPolicy)]
+        [Authorize(PolicyNames.MustBeTeacherOrAdminPolicy)]
         public async Task<IActionResult> PatchAsync(Guid id, ResourceModuleViewPatchModel moduleResourceDetails)
         {
             try
@@ -237,7 +246,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 if (existingLearningModuleDetails.CreatedBy != this.UserObjectId)
                 {
-                    var isAdmin = await this.memberValidationService.ValidateAdminAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString());
+                    var isAdmin = await this.memberValidationService.ValidateMemberAsync(this.UserObjectId.ToString(), this.securityGroupOptions.Value.AdminGroupId, this.Request.Headers["Authorization"].ToString());
                     if (!isAdmin)
                     {
                         this.logger.LogError(StatusCodes.Status401Unauthorized, $"The current user who is trying to update learning module detail have not created learning module or not a part of administrator group for learning module id: {id} ");
@@ -249,15 +258,15 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                 // Delete existing resource tag from storage.
                 this.unitOfWork.LearningModuleTagRepository.DeleteLearningModuleTag(existingLearningModuleDetails.LearningModuleTag);
 
-                // Delete existing resource module mapping from storage.
-                var existingResourceModuleMapping = await this.unitOfWork.ResourceModuleRepository.FindAsync(module => module.LearningModuleId == existingLearningModuleDetails.Id);
-                if (existingResourceModuleMapping.Any() && moduleResourceDetails.Resources.Count() < existingResourceModuleMapping.Count())
+                // Delete resource module mapping from storage.
+                var existingResourceModuleMappings = await this.unitOfWork.ResourceModuleRepository.FindAsync(module => module.LearningModuleId == existingLearningModuleDetails.Id);
+                if (existingResourceModuleMappings.Any() && moduleResourceDetails.Resources.Count() < existingResourceModuleMappings.Count())
                 {
-                    var newMapping = moduleResourceDetails.Resources;
-                    foreach (var resourceModuleMapping in existingResourceModuleMapping)
+                    var resourceModuleMappingsToRetain = moduleResourceDetails.Resources;
+                    foreach (var resourceModuleMapping in existingResourceModuleMappings)
                     {
-                        var resource = newMapping.FirstOrDefault(k => k.Id == resourceModuleMapping.ResourceId);
-                        if (resource == null)
+                        var resourceMapping = resourceModuleMappingsToRetain.FirstOrDefault(k => k.Id == resourceModuleMapping.ResourceId);
+                        if (resourceMapping == null)
                         {
                             this.unitOfWork.ResourceModuleRepository.Delete(resourceModuleMapping);
                         }
@@ -284,8 +293,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 // Get userId and user display name.
                 IEnumerable<string> userAADObjectIds = new string[] { learningModuleEntityModel.CreatedBy.ToString() };
-                IEnumerable<UserDetail> userDetails = new List<UserDetail>();
-                userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
+                var idToNameMap = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
 
                 var learningModuleVotes = await this.GetLearningModuleVotesAsync(learningModuleEntityModel.Id);
                 var moduledata = await this.unitOfWork.LearningModuleRepository.GetAsync(id);
@@ -296,7 +304,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
                     this.UserObjectId,
                     learningModuleVotes,
                     resourceCount,
-                    userDetails);
+                    idToNameMap);
 
                 return this.Ok(learningModule);
             }
@@ -314,7 +322,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="id">Learning module id to be deleted.</param>
         /// <returns>Returns success status code.</returns>
         [HttpDelete("{id}")]
-        [Authorize(PolicyNames.MustBeMemberOfSecurityGroupPolicy)]
+        [Authorize(PolicyNames.MustBeTeacherOrAdminPolicy)]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
             this.RecordEvent("Learning module - HTTP Delete call initiated.", RequestType.Initiated);
@@ -332,7 +340,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 if (learningModuleRequestsData.CreatedBy != this.UserObjectId)
                 {
-                    var isAdmin = await this.memberValidationService.ValidateAdminAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString());
+                    var isAdmin = await this.memberValidationService.ValidateMemberAsync(this.UserObjectId.ToString(), this.securityGroupOptions.Value.AdminGroupId, this.Request.Headers["Authorization"].ToString());
                     if (!isAdmin)
                     {
                         this.logger.LogError(StatusCodes.Status401Unauthorized, $"The current user who is trying to delete learning module detail have not created learning module or not a part of administrator group for learning module id: {id} ");
@@ -441,7 +449,7 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
         /// <param name="resourceLearningModuleDetail">Holds learning modules detail entity data.</param>
         /// <returns>Returns true for successful operation.</returns>
         [HttpPost("{id}/resources")]
-        [Authorize(PolicyNames.MustBeMemberOfSecurityGroupPolicy)]
+        [Authorize(PolicyNames.MustBeTeacherOrAdminPolicy)]
         public async Task<IActionResult> PostResourceModuleMappingAsync(ResourceModuleViewModel resourceLearningModuleDetail)
         {
             this.RecordEvent("Resource module - HTTP post call initiated.", RequestType.Initiated);
@@ -599,17 +607,12 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 // Get userId and user display name.
                 IEnumerable<string> userAADObjectIds = resourceDetailsEntity.Select(resource => resource.CreatedBy.ToString()).Distinct();
-
-                IEnumerable<UserDetail> userDetails = new List<UserDetail>();
-                if (userAADObjectIds.Any())
-                {
-                    userDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
-                }
+                var idToNameMap = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), userAADObjectIds);
 
                 var resourceDetails = this.resourceMapper.MapToViewModels(
                     resourcesWithVote,
                     this.UserObjectId,
-                    userDetails.ToList());
+                    idToNameMap);
 
                 this.logger.LogInformation("Learning module resources- HTTP Get call succeeded.");
                 this.RecordEvent("Learning module resources- HTTP Get call succeeded.", RequestType.Succeeded);
@@ -639,8 +642,8 @@ namespace Microsoft.Teams.Apps.LearnNow.Controllers
 
                 var createdByObjectIds = await this.unitOfWork.LearningModuleRepository.GetCreatedByObjectIdsAsync(recordCount);
 
-                var creatorDetails = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), createdByObjectIds.Select(userId => userId.ToString()));
-
+                var usernames = await this.usersService.GetUserDisplayNamesAsync(this.UserObjectId.ToString(), this.Request.Headers["Authorization"].ToString(), createdByObjectIds.Select(userId => userId.ToString()));
+                var creatorDetails = usernames.Select(k => new UserDetail() { UserId = k.Key, DisplayName = k.Value });
                 this.logger.LogInformation("GetUniqueUserNamesAsync learning module- HTTP Get call succeeded.");
                 this.RecordEvent("GetUniqueUserNamesAsync learning module- HTTP Get call succeeded", RequestType.Succeeded);
                 return this.Ok(creatorDetails);

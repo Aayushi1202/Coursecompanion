@@ -162,5 +162,10 @@
 	"doneButtonText": "Done",
 	"deleteConflictErrorMessage": "Because this value is currently assigned to a published resource or module, it can’t be deleted.",
 	"resourceAddedToLearningModuleDuplicate": "This resource is already in this learning module.",
-	"mobileAddButtonText": "Add"
+	"mobileAddButtonText": "Add",
+	"shouldBePartOfModeratorGroupError": "Not a part of moderator group.",
+
+	"gradeAlreadyExistsValidationMessage": " Grade already exists.",
+	"subjectAlreadyExistsValidationMessage": "Subject already exists.",
+	"tagAlreadyExistsValidationMessage": "Tag already exists."
 }

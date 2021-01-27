@@ -16,13 +16,6 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
     public class ResourceMapper : IResourceMapper
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ResourceMapper"/> class.
-        /// </summary>
-        public ResourceMapper()
-        {
-        }
-
-        /// <summary>
         /// Gets resource entity model from view model.
         /// </summary>
         /// <param name="resourceViewModel">Resource view model object.</param>
@@ -59,14 +52,14 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// Gets resource view model from entity model.
         /// </summary>
         /// <param name="resource">Resource entity model object.</param>
-        /// <param name="userDetails">List of user detail object.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns a resource view model object.</returns>
         public ResourceViewModel MapToViewModel(
             Resource resource,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             resource = resource ?? throw new ArgumentNullException(nameof(resource));
-            userDetails = userDetails ?? throw new ArgumentNullException(nameof(userDetails));
+            idToNameMap = idToNameMap ?? throw new ArgumentNullException(nameof(idToNameMap));
 
             return new ResourceViewModel
             {
@@ -88,7 +81,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 UpdatedOn = DateTimeOffset.Now,
                 IsLikedByUser = false,
                 VoteCount = 0,
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == resource.CreatedBy).DisplayName,
+                UserDisplayName = idToNameMap[resource.CreatedBy],
             };
         }
 
@@ -162,17 +155,17 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// <param name="resource">Resource entity model object.</param>
         /// <param name="userAadObjectId">Azure Active Directory id of current logged-in user.</param>
         /// <param name="resourceVotes">List of resource votes.</param>
-        /// <param name="userDetails">List of user details object.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns a resource view model object.</returns>
         public ResourceViewModel PatchAndMapToViewModel(
             Resource resource,
             Guid userAadObjectId,
             IEnumerable<ResourceVote> resourceVotes,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             resource = resource ?? throw new ArgumentNullException(nameof(resource));
             resourceVotes = resourceVotes ?? throw new ArgumentNullException(nameof(resourceVotes));
-            userDetails = userDetails ?? throw new ArgumentNullException(nameof(userDetails));
+            idToNameMap = idToNameMap ?? throw new ArgumentNullException(nameof(idToNameMap));
 
             return new ResourceViewModel
             {
@@ -194,7 +187,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                 UpdatedOn = resource.UpdatedOn,
                 IsLikedByUser = resourceVotes.Any(vote => vote.UserId == userAadObjectId),
                 VoteCount = resourceVotes.Count(),
-                UserDisplayName = userDetails.ToList().Find(user => user.UserId == resource.CreatedBy)?.DisplayName,
+                UserDisplayName = idToNameMap[resource.CreatedBy],
             };
         }
 
@@ -203,15 +196,15 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
         /// </summary>
         /// <param name="filteredResources">Resource entity object collection.</param>
         /// <param name="userAadObjectId">Azure Active Directory id of current logged-in user.</param>
-        /// <param name="userDetails">List of user details object.</param>
+        /// <param name="idToNameMap">User id and name key value pairs.</param>
         /// <returns>Returns a collection of resource view models.</returns>
         public IEnumerable<ResourceViewModel> MapToViewModels(
             Dictionary<Guid, List<ResourceDetailModel>> filteredResources,
             Guid userAadObjectId,
-            IEnumerable<UserDetail> userDetails)
+            Dictionary<Guid, string> idToNameMap)
         {
             filteredResources = filteredResources ?? throw new ArgumentNullException(nameof(filteredResources));
-            userDetails = userDetails ?? throw new ArgumentNullException(nameof(userDetails));
+            idToNameMap = idToNameMap ?? throw new ArgumentNullException(nameof(idToNameMap));
 
             var resourceDetails = new List<ResourceViewModel>();
 
@@ -238,7 +231,7 @@ namespace Microsoft.Teams.Apps.LearnNow.ModelMappers
                     UpdatedBy = (Guid)resources.UpdatedBy,
                     CreatedOn = resources.CreatedOn,
                     UpdatedOn = resources.UpdatedOn,
-                    UserDisplayName = userDetails.ToList().Find(user => user.UserId == resources.CreatedBy)?.DisplayName,
+                    UserDisplayName = idToNameMap[resources.CreatedBy],
                 });
             }
 
