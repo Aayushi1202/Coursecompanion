@@ -1,6 +1,6 @@
 {
   "name": "learning-central",
-  "version": "1.0.0",
+  "version": "12.18.3",
   "private": true,
   "dependencies": {
     "@fluentui/react": "^7.115.4",
