@@ -7,7 +7,8 @@
 	<LangVersion>latest</LangVersion>
 	<SpaRoot>ClientApp\</SpaRoot>
 	<TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
-	<TypeScriptToolsVersion>3.1</TypeScriptToolsVersion>
+	<TypeScriptToolsVersion>Latest</TypeScriptToolsVersion>
+  <TypeScriptBuildMode>true</TypeScriptBuildMode>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AdaptiveCards.Templating" Version="1.1.0" />
@@ -132,20 +133,4 @@
       </ResolvedFileToPublish>
     </ItemGroup>
   </Target>
-
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <TypeScriptTarget>ES5</TypeScriptTarget>
-    <TypeScriptJSXEmit>React</TypeScriptJSXEmit>
-    <TypeScriptModuleKind />
-    <TypeScriptCompileOnSaveEnabled>False</TypeScriptCompileOnSaveEnabled>
-    <TypeScriptNoImplicitAny>False</TypeScriptNoImplicitAny>
-    <TypeScriptRemoveComments>False</TypeScriptRemoveComments>
-    <TypeScriptOutFile />
-    <TypeScriptOutDir />
-    <TypeScriptGeneratesDeclarations>False</TypeScriptGeneratesDeclarations>
-    <TypeScriptNoEmitOnError>True</TypeScriptNoEmitOnError>
-    <TypeScriptSourceMap>True</TypeScriptSourceMap>
-    <TypeScriptMapRoot />
-    <TypeScriptSourceRoot />
-  </PropertyGroup>
 </Project>
